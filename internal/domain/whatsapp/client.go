@@ -2,6 +2,7 @@ package whatsapp
 
 import (
 	"context"
+	"zmeow/internal/domain/message"
 
 	"github.com/google/uuid"
 )
@@ -37,6 +38,42 @@ type WhatsAppClient interface {
 
 	// DeleteSession remove uma sessão WhatsApp
 	DeleteSession(sessionID uuid.UUID) error
+
+	// SendTextMessage envia uma mensagem de texto
+	SendTextMessage(ctx context.Context, sessionID uuid.UUID, phone, message string) (string, error)
+
+	// SendMediaMessage envia mídia (imagem, áudio, vídeo, documento)
+	SendMediaMessage(ctx context.Context, sessionID uuid.UUID, phone, mediaType string, mediaData []byte, caption, fileName, mimeType string) (string, error)
+
+	// SendMediaFromURL baixa mídia de uma URL e envia como mensagem
+	SendMediaFromURL(ctx context.Context, sessionID uuid.UUID, phone, mediaType, mediaURL, caption, fileName, mimeType string) (string, error)
+
+	// SendLocationMessage envia uma localização
+	SendLocationMessage(ctx context.Context, sessionID uuid.UUID, phone string, latitude, longitude float64, name, address string) (string, error)
+
+	// SendContactMessage envia um contato
+	SendContactMessage(ctx context.Context, sessionID uuid.UUID, phone, contactName, contactJID string) (string, error)
+
+	// SendStickerMessage envia um sticker
+	SendStickerMessage(ctx context.Context, sessionID uuid.UUID, phone string, stickerData []byte, mimeType string) (string, error)
+
+	// SendButtonsMessage envia mensagem com botões
+	SendButtonsMessage(ctx context.Context, sessionID uuid.UUID, phone, text, footer string, buttons []message.MessageButton) (string, error)
+
+	// SendListMessage envia mensagem com lista
+	SendListMessage(ctx context.Context, sessionID uuid.UUID, phone, text, footer, title, buttonText string, sections []message.MessageListSection) (string, error)
+
+	// SendPollMessage envia enquete
+	SendPollMessage(ctx context.Context, sessionID uuid.UUID, phone, name string, options []string, selectableCount int) (string, error)
+
+	// EditMessage edita mensagem existente
+	EditMessage(ctx context.Context, sessionID uuid.UUID, phone, messageID, newText string) (string, error)
+
+	// DeleteMessage deleta uma mensagem
+	DeleteMessage(ctx context.Context, sessionID uuid.UUID, phone, messageID string, forMe bool) error
+
+	// ReactMessage reage a uma mensagem
+	ReactMessage(ctx context.Context, sessionID uuid.UUID, phone, messageID, emoji string) error
 }
 
 // WhatsAppManager gerencia múltiplas sessões WhatsApp

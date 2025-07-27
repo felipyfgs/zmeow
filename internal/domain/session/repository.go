@@ -43,4 +43,7 @@ type SessionRepository interface {
 
 	// UpdateStatus atualiza apenas o status de uma sessão
 	UpdateStatus(ctx context.Context, id uuid.UUID, status WhatsAppSessionStatus) error
+
+	// UpdateLastSeen atualiza o último visto de uma sessão
+	UpdateLastSeen(ctx context.Context, id uuid.UUID) error
 }

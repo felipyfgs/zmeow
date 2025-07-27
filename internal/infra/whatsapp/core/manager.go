@@ -6,6 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"reflect"
+	"strings"
 	"sync"
 	"time"
 
@@ -337,7 +339,7 @@ func (m *Manager) ConnectSession(ctx context.Context, sessionID uuid.UUID) error
 }
 
 // connectSessionFallback método de fallback para conexão direta
-func (m *Manager) connectSessionFallback(ctx context.Context, sessionID uuid.UUID) error {
+func (m *Manager) connectSessionFallback(_ context.Context, sessionID uuid.UUID) error {
 	m.mutex.RLock()
 	state, exists := m.sessionStates[sessionID]
 	m.mutex.RUnlock()
@@ -362,7 +364,7 @@ func (m *Manager) connectSessionFallback(ctx context.Context, sessionID uuid.UUI
 
 	m.updateSessionStatus(sessionID, StatusConnected)
 
-	m.logger.WithField("session_id", sessionID).Info().Msg("Session connected successfully")
+	m.logger.WithField("session_id", sessionID).Debug().Msg("Session connected successfully")
 	return nil
 }
 
@@ -479,7 +481,7 @@ func (m *Manager) DisconnectSession(sessionID uuid.UUID) error {
 
 	m.updateSessionStatus(sessionID, StatusDisconnected)
 
-	m.logger.WithField("session_id", sessionID).Info().Msg("Session disconnected successfully")
+	m.logger.WithField("session_id", sessionID).Debug().Msg("Session disconnected successfully")
 	return nil
 }
 
@@ -627,12 +629,12 @@ func (m *Manager) RestoreSession(ctx context.Context, sessionID uuid.UUID, waJID
 			"session_id": sessionID,
 			"waJid":      waJID,
 			"device_id":  deviceStore.ID.String(),
-		}).Info().Msg("Session restored successfully with existing device")
+		}).Debug().Msg("Session restored with existing device")
 	} else {
 		m.logger.WithFields(map[string]interface{}{
 			"session_id": sessionID,
 			"waJid":      waJID,
-		}).Info().Msg("Session restored with new device - will need authentication")
+		}).Debug().Msg("Session restored with new device")
 	}
 
 	return nil
@@ -678,7 +680,7 @@ func (m *Manager) RestoreSessions(ctx context.Context) error {
 
 // ConnectRestoredSessions conecta automaticamente todas as sessões restauradas
 func (m *Manager) ConnectRestoredSessions(ctx context.Context) {
-	m.logger.Info().Msg("Starting automatic connection of restored sessions")
+	m.logger.Debug().Msg("Starting automatic connection of restored sessions")
 
 	// Aguardar um pouco para garantir que todas as sessões foram restauradas
 	time.Sleep(5 * time.Second)
@@ -693,18 +695,18 @@ func (m *Manager) ConnectRestoredSessions(ctx context.Context) {
 	m.mutex.RUnlock()
 
 	if len(sessions) == 0 {
-		m.logger.Info().Msg("No restored sessions found to connect")
+		m.logger.Debug().Msg("No restored sessions found to connect")
 		return
 	}
 
-	m.logger.WithField("sessions_count", len(sessions)).Info().Msg("Found restored sessions to connect")
+	m.logger.WithField("sessions_count", len(sessions)).Info().Msg("Connecting restored sessions")
 
 	connectedCount := 0
 	for sessionID, state := range sessions {
 		m.logger.WithFields(map[string]interface{}{
 			"session_id": sessionID,
 			"jid":        state.JID.String(),
-		}).Info().Msg("Creating and connecting restored session")
+		}).Debug().Msg("Connecting restored session")
 
 		// Criar contexto com timeout para cada sessão
 		sessionCtx, cancel := context.WithTimeout(ctx, DefaultConnectionTimeout)
@@ -744,7 +746,7 @@ func (m *Manager) ConnectRestoredSessions(ctx context.Context) {
 			if err := m.ConnectSession(sessionCtx, id); err != nil {
 				m.logger.WithError(err).WithField("session_id", id).Error().Msg("Failed to connect restored session")
 			} else {
-				m.logger.WithField("session_id", id).Info().Msg("Restored session connected successfully")
+				m.logger.WithField("session_id", id).Debug().Msg("Restored session connected successfully")
 			}
 		}(sessionID, state)
 
@@ -864,99 +866,461 @@ type EventProcessorWrapper struct {
 func (epw *EventProcessorWrapper) ProcessEvent(sessionID uuid.UUID, evt interface{}) {
 	eventType := fmt.Sprintf("%T", evt)
 
-	// Log básico do evento
+	// Log do evento para debugging
+	epw.manager.logger.WithFields(map[string]interface{}{
+		"sessionId":  sessionID,
+		"eventType":  eventType,
+		"rawPayload": evt,
+	}).Trace().Msg("Raw WhatsApp Event Payload")
+
+	// Processar eventos específicos
+	switch e := evt.(type) {
+	case *events.Connected:
+		epw.handleConnected(sessionID, e)
+	case *events.Disconnected:
+		epw.handleDisconnected(sessionID, e)
+	case *events.LoggedOut:
+		epw.handleLoggedOut(sessionID, e)
+	case *events.PairSuccess:
+		epw.handlePairSuccess(sessionID, e)
+	case *events.Message:
+		epw.handleMessage(sessionID, e)
+	case *events.Receipt:
+		// Processar recibo (lógica futura aqui)
+	default:
+		epw.manager.logger.WithFields(map[string]interface{}{
+			"sessionId": sessionID,
+			"eventType": eventType,
+		}).Debug().Msg("Unhandled WhatsApp event")
+	}
+
+	// Log consolidado do evento com mensagens descritivas
+	rawData := extractEventData(evt)
+	message := getEventMessage(eventType, evt)
+
+	epw.manager.logger.WithFields(map[string]interface{}{
+		"eventType": eventType,
+		"sessionId": sessionID,
+	}).Info().Msgf("%s raw=%s", message, rawData)
+}
+
+// handleConnected processa evento de conexão
+func (epw *EventProcessorWrapper) handleConnected(sessionID uuid.UUID, _ *events.Connected) {
+	epw.manager.mutex.Lock()
+	defer epw.manager.mutex.Unlock()
+
+	state, exists := epw.manager.sessionStates[sessionID]
+	if !exists {
+		epw.manager.logger.WithField("sessionId", sessionID).Error().Msg("Session not found for connected event")
+		return
+	}
+
+	// Atualizar status na memória
+	state.Status = StatusConnected
+	now := time.Now()
+	state.LastSeen = &now
+
+	// Atualizar JID se disponível
+	if state.Client != nil && state.Client.Store.ID != nil {
+		state.JID = state.Client.Store.ID
+	}
+
 	epw.manager.logger.WithFields(map[string]interface{}{
 		"sessionId": sessionID,
-		"eventType": eventType,
-	}).Debug().Msg("Processing WhatsApp event")
+		"jid":       state.JID,
+	}).Info().Msg("Session connected")
 
-	// Log detalhado para eventos específicos
-	switch e := evt.(type) {
-	case *events.Message:
-		epw.manager.logger.WithFields(map[string]interface{}{
-			"sessionId": sessionID,
-			"eventType": eventType,
-			"messageId": e.Info.ID,
-			"chatId":    e.Info.Chat.String(),
-			"senderId":  e.Info.Sender.String(),
-			"fromMe":    e.Info.IsFromMe,
-			"timestamp": e.Info.Timestamp,
-			"messageType": func() string {
-				if e.Message.GetConversation() != "" {
-					return "text"
-				} else if e.Message.GetImageMessage() != nil {
-					return "image"
-				} else if e.Message.GetVideoMessage() != nil {
-					return "video"
-				} else if e.Message.GetAudioMessage() != nil {
-					return "audio"
-				} else if e.Message.GetDocumentMessage() != nil {
-					return "document"
-				} else if e.Message.GetStickerMessage() != nil {
-					return "sticker"
-				}
-				return "unknown"
-			}(),
-			"messageText": func() string {
-				if e.Message.GetConversation() != "" {
-					return e.Message.GetConversation()
-				}
-				return ""
-			}(),
-		}).Info().Msg("MESSAGE EVENT RECEIVED")
+	// Atualizar banco de dados
+	go epw.updateDatabaseOnConnect(sessionID, state.JID)
+}
 
-	case *events.Receipt:
-		epw.manager.logger.WithFields(map[string]interface{}{
-			"sessionId":     sessionID,
-			"eventType":     eventType,
-			"chatId":        e.Chat.String(),
-			"senderId":      e.Sender.String(),
-			"messageIds":    e.MessageIDs,
-			"receiptType":   string(e.Type),
-			"timestamp":     e.Timestamp,
-			"messageSender": e.MessageSender.String(),
-		}).Info().Msg("RECEIPT EVENT RECEIVED")
+// handleDisconnected processa evento de desconexão
+func (epw *EventProcessorWrapper) handleDisconnected(sessionID uuid.UUID, _ *events.Disconnected) {
+	epw.manager.mutex.Lock()
+	defer epw.manager.mutex.Unlock()
 
-	case *events.PairSuccess:
-		epw.manager.logger.WithFields(map[string]interface{}{
-			"sessionId":    sessionID,
-			"eventType":    eventType,
-			"deviceId":     e.ID.String(),
-			"businessName": e.BusinessName,
-			"platform":     e.Platform,
-		}).Info().Msg("PAIR SUCCESS EVENT")
+	state, exists := epw.manager.sessionStates[sessionID]
+	if !exists {
+		epw.manager.logger.WithField("sessionId", sessionID).Error().Msg("Session not found for disconnected event")
+		return
+	}
 
-		// Salvar WaJID no banco de dados
-		go epw.saveWaJIDToDatabase(sessionID, e.ID.String())
+	// Atualizar status na memória
+	state.Status = StatusDisconnected
+	now := time.Now()
+	state.LastSeen = &now
 
-	case *events.Connected:
-		epw.manager.logger.WithFields(map[string]interface{}{
-			"sessionId": sessionID,
-			"eventType": eventType,
-		}).Info().Msg("CONNECTED EVENT")
+	epw.manager.logger.WithField("sessionId", sessionID).Info().Msg("Session disconnected")
 
-	case *events.Disconnected:
-		epw.manager.logger.WithFields(map[string]interface{}{
-			"sessionId": sessionID,
-			"eventType": eventType,
-		}).Info().Msg("DISCONNECTED EVENT")
+	// Atualizar banco de dados
+	go epw.updateDatabaseStatus(sessionID, session.WhatsAppStatusDisconnected)
+}
 
+// handleLoggedOut processa evento de logout
+func (epw *EventProcessorWrapper) handleLoggedOut(sessionID uuid.UUID, _ *events.LoggedOut) {
+	epw.manager.mutex.Lock()
+	defer epw.manager.mutex.Unlock()
+
+	state, exists := epw.manager.sessionStates[sessionID]
+	if !exists {
+		epw.manager.logger.WithField("sessionId", sessionID).Error().Msg("Session not found for logged out event")
+		return
+	}
+
+	// Atualizar status na memória
+	state.Status = StatusDisconnected
+	state.JID = nil
+	now := time.Now()
+	state.LastSeen = &now
+
+	epw.manager.logger.WithField("sessionId", sessionID).Warn().Msg("Session logged out")
+
+	// Atualizar banco de dados
+	go epw.updateDatabaseOnLogout(sessionID)
+}
+
+// handlePairSuccess processa sucesso no pareamento
+func (epw *EventProcessorWrapper) handlePairSuccess(sessionID uuid.UUID, evt *events.PairSuccess) {
+	epw.manager.mutex.Lock()
+	defer epw.manager.mutex.Unlock()
+
+	state, exists := epw.manager.sessionStates[sessionID]
+	if !exists {
+		epw.manager.logger.WithField("sessionId", sessionID).Error().Msg("Session not found for pair success event")
+		return
+	}
+
+	// Atualizar JID na memória
+	state.JID = &evt.ID
+
+	epw.manager.logger.WithFields(map[string]interface{}{
+		"sessionId": sessionID,
+		"jid":       evt.ID.String(),
+	}).Info().Msg("Phone pairing successful")
+
+	// Salvar WaJID no banco de dados
+	go epw.saveWaJIDToDatabase(sessionID, evt.ID.String())
+}
+
+// handleMessage processa mensagens recebidas
+func (epw *EventProcessorWrapper) handleMessage(sessionID uuid.UUID, evt *events.Message) {
+	epw.manager.mutex.Lock()
+	defer epw.manager.mutex.Unlock()
+
+	state, exists := epw.manager.sessionStates[sessionID]
+	if !exists {
+		epw.manager.logger.WithField("sessionId", sessionID).Error().Msg("Session not found for message event")
+		return
+	}
+
+	// Atualizar último visto
+	now := time.Now()
+	state.LastSeen = &now
+
+	epw.manager.logger.WithFields(map[string]interface{}{
+		"sessionId": sessionID,
+		"messageId": evt.Info.ID,
+		"from":      evt.Info.Sender.String(),
+		"timestamp": evt.Info.Timestamp,
+	}).Info().Msg("Message received")
+
+	// Atualizar último visto no banco
+	go epw.updateLastSeen(sessionID)
+}
+
+// Métodos auxiliares para atualização do banco de dados
+func (epw *EventProcessorWrapper) updateDatabaseOnConnect(sessionID uuid.UUID, jid *types.JID) {
+	ctx := context.Background()
+	repo := database.NewSessionRepository(epw.manager.db)
+
+	// Atualizar status para conectado
+	if err := repo.UpdateStatus(ctx, sessionID, session.WhatsAppStatusConnected); err != nil {
+		epw.manager.logger.WithError(err).Error().Msg("Failed to update status to connected in database")
+	}
+
+	// Atualizar JID se disponível
+	if jid != nil {
+		if err := repo.UpdateJID(ctx, sessionID, jid.String()); err != nil {
+			epw.manager.logger.WithError(err).Error().Msg("Failed to update JID in database")
+		}
+	}
+
+	epw.manager.logger.WithField("sessionId", sessionID).Debug().Msg("Database updated on connect")
+}
+
+func (epw *EventProcessorWrapper) updateDatabaseStatus(sessionID uuid.UUID, status session.WhatsAppSessionStatus) {
+	ctx := context.Background()
+	repo := database.NewSessionRepository(epw.manager.db)
+
+	if err := repo.UpdateStatus(ctx, sessionID, status); err != nil {
+		epw.manager.logger.WithError(err).Error().Msg("Failed to update status in database")
+	}
+
+	epw.manager.logger.WithFields(map[string]interface{}{
+		"sessionId": sessionID,
+		"status":    status,
+	}).Debug().Msg("Database status updated")
+}
+
+func (epw *EventProcessorWrapper) updateDatabaseOnLogout(sessionID uuid.UUID) {
+	ctx := context.Background()
+	repo := database.NewSessionRepository(epw.manager.db)
+
+	// Atualizar status para desconectado
+	if err := repo.UpdateStatus(ctx, sessionID, session.WhatsAppStatusDisconnected); err != nil {
+		epw.manager.logger.WithError(err).Error().Msg("Failed to update status to disconnected in database")
+	}
+
+	// Limpar JID
+	if err := repo.UpdateJID(ctx, sessionID, ""); err != nil {
+		epw.manager.logger.WithError(err).Error().Msg("Failed to clear JID in database")
+	}
+
+	epw.manager.logger.WithField("sessionId", sessionID).Debug().Msg("Database updated on logout")
+}
+
+func (epw *EventProcessorWrapper) updateLastSeen(sessionID uuid.UUID) {
+	ctx := context.Background()
+	repo := database.NewSessionRepository(epw.manager.db)
+
+	if err := repo.UpdateLastSeen(ctx, sessionID); err != nil {
+		epw.manager.logger.WithError(err).Error().Msg("Failed to update last seen in database")
+	}
+}
+
+// getEventMessage retorna uma mensagem descritiva para cada tipo de evento
+func getEventMessage(eventType string, evt interface{}) string {
+	switch eventType {
+	case "*events.Connected":
+		return "Conexão estabelecida com sucesso"
+	case "*events.Disconnected":
+		return "Conexão encerrada"
+	case "*events.Message":
+		if msg, ok := evt.(*events.Message); ok {
+			if msg.Info.IsFromMe {
+				return "Mensagem enviada"
+			}
+			return "Mensagem recebida"
+		}
+		return "Evento de mensagem"
+	case "*events.Receipt":
+		if receipt, ok := evt.(*events.Receipt); ok {
+			switch receipt.Type {
+			case types.ReceiptTypeDelivered:
+				return "Mensagem entregue"
+			case types.ReceiptTypeRead:
+				return "Mensagem lida"
+			case types.ReceiptTypePlayed:
+				return "Áudio/vídeo reproduzido"
+			default:
+				return "Recibo de mensagem"
+			}
+		}
+		return "Recibo de mensagem"
+	case "*events.Presence":
+		if presence, ok := evt.(*events.Presence); ok {
+			switch presence.Unavailable {
+			case false:
+				return "Usuário online"
+			default:
+				return "Usuário offline"
+			}
+		}
+		return "Status de presença"
+	case "*events.ChatPresence":
+		if chatPresence, ok := evt.(*events.ChatPresence); ok {
+			switch chatPresence.State {
+			case "composing":
+				return "Usuário digitando"
+			case "recording":
+				return "Usuário gravando áudio"
+			case "paused":
+				return "Usuário parou de digitar"
+			default:
+				return "Status de digitação"
+			}
+		}
+		return "Status de digitação"
+	case "*events.PairSuccess":
+		return "Dispositivo pareado com sucesso"
+	case "*events.PairError":
+		return "Erro no pareamento do dispositivo"
+	case "*events.LoggedOut":
+		return "Sessão desconectada remotamente"
+	case "*events.OfflineSyncPreview":
+		if sync, ok := evt.(*events.OfflineSyncPreview); ok {
+			return fmt.Sprintf("Sincronização offline iniciada (%d mensagens pendentes)", sync.Total)
+		}
+		return "Sincronização offline iniciada"
+	case "*events.OfflineSyncCompleted":
+		if sync, ok := evt.(*events.OfflineSyncCompleted); ok {
+			return fmt.Sprintf("Sincronização offline concluída (%d mensagens processadas)", sync.Count)
+		}
+		return "Sincronização offline concluída"
+	case "*events.HistorySync":
+		return "Histórico sincronizado"
+	case "*events.AppState":
+		return "Estado da aplicação atualizado"
+	case "*events.KeepAliveTimeout":
+		return "Timeout de keep-alive"
+	case "*events.KeepAliveRestored":
+		return "Keep-alive restaurado"
+	case "*events.Blocklist":
+		return "Lista de bloqueios atualizada"
+	case "*events.Contact":
+		return "Contato atualizado"
+	case "*events.PushName":
+		return "Nome do contato atualizado"
+	case "*events.GroupInfo":
+		return "Informações do grupo atualizadas"
+	case "*events.JoinedGroup":
+		return "Adicionado ao grupo"
+	case "*events.Newsletter":
+		return "Newsletter atualizada"
+	case "*events.CallOffer":
+		return "Chamada recebida"
+	case "*events.CallAccept":
+		return "Chamada aceita"
+	case "*events.CallPreAccept":
+		return "Chamada pré-aceita"
+	case "*events.CallTransport":
+		return "Transporte de chamada"
+	case "*events.CallRelayLatency":
+		return "Latência de chamada"
+	case "*events.CallTerminate":
+		return "Chamada encerrada"
+	case "*events.UnknownCallEvent":
+		return "Evento de chamada desconhecido"
+	case "*events.UndecryptableMessage":
+		return "Mensagem não descriptografável"
+	case "*events.MediaRetry":
+		return "Tentativa de reenvio de mídia"
+	case "*events.AppStateSyncComplete":
+		return "Sincronização de estado completa"
+	case "*events.PictureUpdate":
+		return "Foto de perfil atualizada"
+	case "*events.IdentityChange":
+		return "Identidade alterada"
+	case "*events.PrivacySettings":
+		return "Configurações de privacidade atualizadas"
+	case "*events.TempBan":
+		return "Banimento temporário"
+	case "*events.ConnectFailure":
+		return "Falha na conexão"
+	case "*events.ClientOutdated":
+		return "Cliente desatualizado"
+	case "*events.StreamReplaced":
+		return "Stream substituído"
+	case "*events.StreamError":
+		return "Erro no stream"
+	case "*events.QRScanned":
+		return "QR Code escaneado"
+	case "*events.PairCode":
+		return "Código de pareamento gerado"
 	default:
-		// Para outros eventos, apenas log básico
-		epw.manager.logger.WithFields(map[string]interface{}{
-			"sessionId": sessionID,
-			"eventType": eventType,
-		}).Debug().Msg("Other WhatsApp event")
+		return "Evento do WhatsApp"
+	}
+}
+
+// extractEventData extrai dados estruturados dos eventos do WhatsApp
+func extractEventData(evt interface{}) string {
+	// Primeiro tentar serialização JSON padrão
+	if eventJSON, err := json.Marshal(evt); err == nil {
+		// Se o JSON não estiver vazio, retornar
+		jsonStr := string(eventJSON)
+		if jsonStr != "{}" && jsonStr != "null" {
+			return jsonStr
+		}
 	}
 
-	// Log do JSON bruto do evento no final (pretty print)
-	if eventJSON, err := json.MarshalIndent(evt, "", "  "); err == nil {
-		epw.manager.logger.WithFields(map[string]interface{}{
-			"component": "whatsapp-manager",
-			"eventType": eventType,
-			"sessionId": sessionID,
-		}).Info().Msgf("Event processed raw=%s", string(eventJSON))
+	// Para eventos vazios, adicionar informações contextuais
+	eventType := fmt.Sprintf("%T", evt)
+	switch eventType {
+	case "*events.Connected":
+		return `{"status":"connected","timestamp":"` + time.Now().Format(time.RFC3339) + `"}`
+	case "*events.Disconnected":
+		return `{"status":"disconnected","timestamp":"` + time.Now().Format(time.RFC3339) + `"}`
+	default:
+		// Para outros eventos vazios, usar reflection
+		return extractEventDataWithReflection(evt)
 	}
+}
+
+// extractEventDataWithReflection usa reflection para extrair dados de eventos
+func extractEventDataWithReflection(evt interface{}) string {
+	if evt == nil {
+		return "{}"
+	}
+
+	// Usar reflection para extrair campos
+	v := reflect.ValueOf(evt)
+	if v.Kind() == reflect.Ptr {
+		if v.IsNil() {
+			return "{}"
+		}
+		v = v.Elem()
+	}
+
+	if v.Kind() != reflect.Struct {
+		// Se não for struct, tentar converter para string
+		return fmt.Sprintf(`{"value": %v}`, evt)
+	}
+
+	// Extrair campos da struct
+	result := make(map[string]interface{})
+	t := v.Type()
+
+	for i := 0; i < v.NumField(); i++ {
+		field := v.Field(i)
+		fieldType := t.Field(i)
+
+		// Pular campos não exportados
+		if !field.CanInterface() {
+			continue
+		}
+
+		// Obter nome do campo (usar tag json se disponível)
+		fieldName := fieldType.Name
+		if jsonTag := fieldType.Tag.Get("json"); jsonTag != "" && jsonTag != "-" {
+			if commaIdx := strings.Index(jsonTag, ","); commaIdx > 0 {
+				fieldName = jsonTag[:commaIdx]
+			} else {
+				fieldName = jsonTag
+			}
+		}
+
+		// Obter valor do campo
+		fieldValue := field.Interface()
+
+		// Processar valores especiais
+		switch v := fieldValue.(type) {
+		case time.Time:
+			if !v.IsZero() {
+				result[fieldName] = v.Format(time.RFC3339)
+			}
+		case *time.Time:
+			if v != nil && !v.IsZero() {
+				result[fieldName] = v.Format(time.RFC3339)
+			}
+		default:
+			// Verificar se o valor não é zero
+			if !reflect.ValueOf(fieldValue).IsZero() {
+				result[fieldName] = fieldValue
+			}
+		}
+	}
+
+	// Se não encontrou nenhum campo, retornar objeto vazio
+	if len(result) == 0 {
+		return "{}"
+	}
+
+	// Serializar resultado
+	if resultJSON, err := json.Marshal(result); err == nil {
+		return string(resultJSON)
+	}
+
+	return "{}"
 }
 
 // saveWaJIDToDatabase salva o WaJID no banco de dados após autenticação bem-sucedida

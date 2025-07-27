@@ -74,7 +74,7 @@ func main() {
 	}
 
 	// Configurar router com handlers
-	handler := router.NewRouter(container.SessionHandler, container.HealthHandler)
+	handler := router.NewRouter(container.SessionHandler, container.HealthHandler, container.MessageHandler, container.ChatHandler, container.GroupHandler)
 
 	// Criar servidor
 	srv := server.New(cfg, handler, log)

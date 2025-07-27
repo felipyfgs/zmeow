@@ -20,17 +20,23 @@ type Router struct {
 	logger         logger.Logger
 	sessionHandler *handlers.SessionHandler
 	healthHandler  *handlers.HealthHandler
+	messageHandler *handlers.MessageHandler
+	chatHandler    *handlers.ChatHandler
+	groupHandler   *handlers.GroupHandler
 }
 
 // NewRouter cria uma nova instância do router sem config (para compatibilidade)
-func NewRouter(sessionHandler *handlers.SessionHandler, healthHandler *handlers.HealthHandler) *Router {
+func NewRouter(sessionHandler *handlers.SessionHandler, healthHandler *handlers.HealthHandler, messageHandler *handlers.MessageHandler, chatHandler *handlers.ChatHandler, groupHandler *handlers.GroupHandler) *Router {
 	log := logger.WithComponent("router")
-	
+
 	r := &Router{
 		Mux:            chi.NewRouter(),
 		logger:         log,
 		sessionHandler: sessionHandler,
 		healthHandler:  healthHandler,
+		messageHandler: messageHandler,
+		chatHandler:    chatHandler,
+		groupHandler:   groupHandler,
 	}
 
 	r.setupMiddlewares()
@@ -45,6 +51,9 @@ func New(
 	log logger.Logger,
 	sessionHandler *handlers.SessionHandler,
 	healthHandler *handlers.HealthHandler,
+	messageHandler *handlers.MessageHandler,
+	chatHandler *handlers.ChatHandler,
+	groupHandler *handlers.GroupHandler,
 ) *Router {
 	r := &Router{
 		Mux:            chi.NewRouter(),
@@ -52,6 +61,9 @@ func New(
 		logger:         log.WithComponent("router"),
 		sessionHandler: sessionHandler,
 		healthHandler:  healthHandler,
+		messageHandler: messageHandler,
+		chatHandler:    chatHandler,
+		groupHandler:   groupHandler,
 	}
 
 	r.setupMiddlewares()
@@ -86,7 +98,7 @@ func (r *Router) setupRoutes() {
 	r.Route("/sessions", func(rt chi.Router) {
 		rt.Post("/add", r.sessionHandler.AddSession)
 		rt.Get("/list", r.sessionHandler.ListSessions)
-		
+
 		// Rotas que requerem sessionID
 		rt.Route("/{sessionID}", func(rt chi.Router) {
 			rt.Get("/", r.sessionHandler.GetSession)
@@ -97,6 +109,81 @@ func (r *Router) setupRoutes() {
 			rt.Get("/qr", r.sessionHandler.GetQRCode)
 			rt.Post("/pairphone", r.sessionHandler.PairPhone)
 			rt.Post("/proxy/set", r.sessionHandler.SetProxy)
+		})
+	})
+
+	// Rotas de mensagens
+	r.Route("/messages", func(rt chi.Router) {
+		// Rotas que requerem sessionID
+		rt.Route("/{sessionID}", func(rt chi.Router) {
+			// Rotas de envio
+			rt.Route("/send", func(rt chi.Router) {
+				rt.Post("/text", r.messageHandler.SendTextMessage)
+				rt.Post("/media", r.messageHandler.SendMediaMessage)
+				rt.Post("/image", r.messageHandler.SendImageMessage)
+				rt.Post("/audio", r.messageHandler.SendAudioMessage)
+				rt.Post("/video", r.messageHandler.SendVideoMessage)
+				rt.Post("/document", r.messageHandler.SendDocumentMessage)
+				rt.Post("/location", r.messageHandler.SendLocationMessage)
+				rt.Post("/contact", r.messageHandler.SendContactMessage)
+				rt.Post("/sticker", r.messageHandler.SendStickerMessage)
+				rt.Post("/buttons", r.messageHandler.SendButtonsMessage)
+				rt.Post("/list", r.messageHandler.SendListMessage)
+				rt.Post("/poll", r.messageHandler.SendPollMessage)
+				rt.Post("/edit", r.messageHandler.EditMessage)
+			})
+
+			// Outras operações de mensagem
+			rt.Post("/delete", r.messageHandler.DeleteMessage)
+			rt.Post("/react", r.messageHandler.ReactMessage)
+
+			// TODO: Implementar histórico de mensagens
+			// rt.Get("/", r.messageHandler.GetMessageHistory)
+		})
+	})
+
+	// Rotas de chat (funcionalidades específicas de gerenciamento de chat)
+	r.Route("/chat", func(rt chi.Router) {
+		// Rotas que requerem sessionID
+		rt.Route("/{sessionID}", func(rt chi.Router) {
+			// Operações específicas de chat (não duplicadas)
+			rt.Post("/presence", r.chatHandler.SendChatPresence)
+			rt.Post("/markread", r.chatHandler.MarkAsRead)
+
+			// Downloads de mídia
+			rt.Post("/downloadimage", r.chatHandler.DownloadImage)
+			rt.Post("/downloadvideo", r.chatHandler.DownloadVideo)
+			rt.Post("/downloadaudio", r.chatHandler.DownloadAudio)
+			rt.Post("/downloaddocument", r.chatHandler.DownloadDocument)
+		})
+	})
+
+	// Rotas de grupos
+	r.Route("/groups", func(rt chi.Router) {
+		// Rotas que requerem sessionID
+		rt.Route("/{sessionID}", func(rt chi.Router) {
+			// Operações básicas de grupos
+			rt.Post("/create", r.groupHandler.CreateGroup)
+			rt.Get("/list", r.groupHandler.ListGroups)
+			rt.Get("/info", r.groupHandler.GetGroupInfo)
+
+			// Gerenciamento de participantes
+			rt.Post("/leave", r.groupHandler.LeaveGroup)
+			rt.Post("/participants/update", r.groupHandler.UpdateParticipants)
+
+			// Configurações do grupo
+			rt.Post("/settings/name", r.groupHandler.SetGroupName)
+			rt.Post("/settings/topic", r.groupHandler.SetGroupTopic)
+			rt.Post("/settings/photo", r.groupHandler.SetGroupPhoto)
+			rt.Delete("/settings/photo", r.groupHandler.RemoveGroupPhoto)
+			rt.Post("/settings/announce", r.groupHandler.SetGroupAnnounce)
+			rt.Post("/settings/locked", r.groupHandler.SetGroupLocked)
+			rt.Post("/settings/disappearing", r.groupHandler.SetDisappearingTimer)
+
+			// Convites de grupo
+			rt.Get("/invite/link", r.groupHandler.GetGroupInviteLink)
+			rt.Post("/invite/join", r.groupHandler.JoinGroupWithLink)
+			rt.Post("/invite/info", r.groupHandler.GetGroupInviteInfo)
 		})
 	})
 

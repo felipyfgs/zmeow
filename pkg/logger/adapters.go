@@ -9,41 +9,74 @@ import (
 	"github.com/uptrace/bun"
 )
 
+// ============================================================================
+// WHATSAPP ADAPTER
+// ============================================================================
+
 // WhatsAppLoggerInterface define a interface esperada pelo whatsmeow
 type WhatsAppLoggerInterface interface {
-	Errorf(string, ...interface{})
-	Warnf(string, ...interface{})
-	Infof(string, ...interface{})
-	Debugf(string, ...interface{})
+	Errorf(string, ...any)
+	Warnf(string, ...any)
+	Infof(string, ...any)
+	Debugf(string, ...any)
 	Sub(string) WhatsAppLoggerInterface
 }
 
-// WhatsAppLoggerAdapter adapta nosso Logger para whatsmeow
-type WhatsAppLoggerAdapter struct{ logger Logger }
+// WhatsAppLoggerAdapter adapta nosso Logger para whatsmeow (otimizado)
+type WhatsAppLoggerAdapter struct {
+	logger Logger
+}
 
 // NewWhatsAppLoggerAdapter cria adaptador para whatsmeow
 func NewWhatsAppLoggerAdapter(logger Logger) WhatsAppLoggerInterface {
-	return &WhatsAppLoggerAdapter{logger}
+	return &WhatsAppLoggerAdapter{logger: logger}
 }
 
-// Implementação da interface de logger do whatsmeow
-func (w *WhatsAppLoggerAdapter) Errorf(msg string, args ...interface{}) {
-	w.logger.Error().Msgf(msg, args...)
+// Implementação da interface de logger do whatsmeow (otimizada)
+func (w *WhatsAppLoggerAdapter) Errorf(msg string, args ...any) {
+	if len(args) == 0 {
+		w.logger.Error().Msg(msg)
+	} else {
+		w.logger.Error().Msgf(msg, args...)
+	}
 }
-func (w *WhatsAppLoggerAdapter) Warnf(msg string, args ...interface{}) {
-	w.logger.Warn().Msgf(msg, args...)
+
+func (w *WhatsAppLoggerAdapter) Warnf(msg string, args ...any) {
+	if len(args) == 0 {
+		w.logger.Warn().Msg(msg)
+	} else {
+		w.logger.Warn().Msgf(msg, args...)
+	}
 }
-func (w *WhatsAppLoggerAdapter) Infof(msg string, args ...interface{}) {
-	w.logger.Info().Msgf(msg, args...)
+
+func (w *WhatsAppLoggerAdapter) Infof(msg string, args ...any) {
+	if len(args) == 0 {
+		w.logger.Info().Msg(msg)
+	} else {
+		w.logger.Info().Msgf(msg, args...)
+	}
 }
-func (w *WhatsAppLoggerAdapter) Debugf(msg string, args ...interface{}) {
-	w.logger.Debug().Msgf(msg, args...)
+
+func (w *WhatsAppLoggerAdapter) Debugf(msg string, args ...any) {
+	if len(args) == 0 {
+		w.logger.Debug().Msg(msg)
+	} else {
+		w.logger.Debug().Msgf(msg, args...)
+	}
 }
+
 func (w *WhatsAppLoggerAdapter) Sub(module string) WhatsAppLoggerInterface {
-	return NewWhatsAppLoggerAdapter(w.logger.WithComponent(module))
+	if module == "" {
+		return w
+	}
+	return &WhatsAppLoggerAdapter{logger: w.logger.WithComponent(module)}
 }
 
-// BunQueryHook implementa hook para logging de queries do Bun ORM
+// ============================================================================
+// BUN ORM ADAPTER
+// ============================================================================
+
+// BunQueryHook implementa hook para logging de queries do Bun ORM (otimizado)
 type BunQueryHook struct {
 	logger Logger
 }
@@ -55,14 +88,16 @@ func NewBunQueryHook(logger Logger) bun.QueryHook {
 	}
 }
 
-// BeforeQuery é chamado antes da execução da query
+// BeforeQuery é chamado antes da execução da query (otimizado)
 func (h *BunQueryHook) BeforeQuery(ctx context.Context, event *bun.QueryEvent) context.Context {
+	// Não fazer nada aqui para melhor performance
 	return ctx
 }
 
-// AfterQuery é chamado após a execução da query
+// AfterQuery é chamado após a execução da query (otimizado)
 func (h *BunQueryHook) AfterQuery(ctx context.Context, event *bun.QueryEvent) {
 	duration := time.Since(event.StartTime)
+	durationMs := duration.Milliseconds()
 
 	if event.Err != nil {
 		// Erros sempre são logados com detalhes completos
@@ -70,21 +105,21 @@ func (h *BunQueryHook) AfterQuery(ctx context.Context, event *bun.QueryEvent) {
 			Err(event.Err).
 			Str("query", h.sanitizeQuery(event.Query)).
 			Dur("duration", duration).
-			Int64("duration_ms", duration.Milliseconds()).
+			Int64("duration_ms", durationMs).
 			Str("operation", h.getQueryOperation(event.Query)).
 			Str("table", h.getQueryTable(event.Query)).
 			Msg("Database query failed")
-	} else {
-		// Queries de sucesso com logging inteligente
-		h.logSuccessfulQuery(event.Query, duration)
+		return
 	}
+
+	// Queries de sucesso com logging inteligente (otimizado)
+	h.logSuccessfulQuery(event.Query, duration, durationMs)
 }
 
-// logSuccessfulQuery aplica logging inteligente baseado no tipo e duração da query
-func (h *BunQueryHook) logSuccessfulQuery(query string, duration time.Duration) {
+// logSuccessfulQuery aplica logging inteligente baseado no tipo e duração da query (otimizado)
+func (h *BunQueryHook) logSuccessfulQuery(query string, duration time.Duration, durationMs int64) {
 	operation := h.getQueryOperation(query)
 	table := h.getQueryTable(query)
-	durationMs := duration.Milliseconds()
 
 	// Queries muito rápidas (< 10ms) só logam em TRACE
 	if durationMs < 10 && h.isRoutineQuery(query) {
@@ -227,32 +262,57 @@ func (h *BunQueryHook) extractTableNameSimple(query, operation string) string {
 	return "unknown"
 }
 
-// sanitizeQuery remove dados sensíveis e encurta a query para logging
+// sanitizeQuery remove dados sensíveis e encurta a query para logging (otimizado)
 func (h *BunQueryHook) sanitizeQuery(query string) string {
-	// Limitar tamanho da query
-	maxLength := 200
+	if query == "" {
+		return ""
+	}
+
+	// Limitar tamanho da query primeiro para melhor performance
+	const maxLength = 200
 	if len(query) > maxLength {
 		query = query[:maxLength] + "..."
 	}
 
-	// Remover quebras de linha e espaços extras
-	query = strings.ReplaceAll(query, "\n", " ")
-	query = strings.ReplaceAll(query, "\t", " ")
+	// Usar strings.Builder para melhor performance
+	var builder strings.Builder
+	builder.Grow(len(query)) // Pre-allocate capacity
 
-	// Normalizar espaços
-	for strings.Contains(query, "  ") {
-		query = strings.ReplaceAll(query, "  ", " ")
+	// Processar caractere por caractere para normalizar espaços
+	var lastWasSpace bool
+	for _, r := range query {
+		switch r {
+		case '\n', '\t', '\r':
+			if !lastWasSpace {
+				builder.WriteByte(' ')
+				lastWasSpace = true
+			}
+		case ' ':
+			if !lastWasSpace {
+				builder.WriteByte(' ')
+				lastWasSpace = true
+			}
+		default:
+			builder.WriteRune(r)
+			lastWasSpace = false
+		}
 	}
 
-	return strings.TrimSpace(query)
+	return strings.TrimSpace(builder.String())
 }
 
+// ============================================================================
+// DATABASE LOGGER (DEPRECATED - Use BunQueryHook instead)
+// ============================================================================
+
 // DatabaseLogger é um logger específico para operações de banco de dados
+// DEPRECATED: Use BunQueryHook para melhor integração com Bun ORM
 type DatabaseLogger struct {
 	logger Logger
 }
 
 // NewDatabaseLogger cria um novo logger para operações de banco
+// DEPRECATED: Use NewBunQueryHook para melhor integração com Bun ORM
 func NewDatabaseLogger(logger Logger) *DatabaseLogger {
 	return &DatabaseLogger{
 		logger: logger.WithComponent("database"),
@@ -362,12 +422,18 @@ func (h *HTTPLogger) getLogMessage(status int, duration time.Duration) string {
 	}
 }
 
+// ============================================================================
+// WHATSAPP DOMAIN LOGGER (DEPRECATED - Use WhatsAppLoggerAdapter instead)
+// ============================================================================
+
 // WhatsAppLogger é um logger específico para eventos do WhatsApp
+// DEPRECATED: Use WhatsAppLoggerAdapter para melhor integração com whatsmeow
 type WhatsAppLogger struct {
 	logger Logger
 }
 
 // NewWhatsAppLogger cria um novo logger para WhatsApp
+// DEPRECATED: Use NewWhatsAppLoggerAdapter para melhor integração com whatsmeow
 func NewWhatsAppLogger(logger Logger) *WhatsAppLogger {
 	return &WhatsAppLogger{
 		logger: logger.WithComponent("whatsapp"),
@@ -422,49 +488,87 @@ func (w *WhatsAppLogger) LogError(sessionID string, err error, context map[strin
 	logEvent.Msg("WhatsApp error")
 }
 
+// ============================================================================
+// SESSION LOGGER (DEPRECATED - Use Logger.WithFields instead)
+// ============================================================================
+
 // SessionLogger é um logger específico para sessões
+// DEPRECATED: Use logger.WithFields(map[string]any{"session_id": sessionID}) instead
 type SessionLogger struct {
 	logger    Logger
 	sessionID string
 }
 
 // NewSessionLogger cria um novo logger para uma sessão específica
+// DEPRECATED: Use logger.WithFields(map[string]any{"session_id": sessionID}) instead
 func NewSessionLogger(logger Logger, sessionID string) *SessionLogger {
 	return &SessionLogger{
-		logger:    logger.WithComponent("session").WithFields(map[string]interface{}{"session_id": sessionID}),
+		logger:    logger.WithComponent("session").WithFields(map[string]any{"session_id": sessionID}),
 		sessionID: sessionID,
 	}
 }
 
-// LogEvent loga um evento da sessão
-func (s *SessionLogger) LogEvent(eventType string, fields map[string]interface{}) {
+// LogEvent loga um evento da sessão (otimizado)
+func (s *SessionLogger) LogEvent(eventType string, fields map[string]any) {
+	if eventType == "" {
+		return
+	}
+
 	event := s.logger.Info().Str("event_type", eventType)
 
-	for key, value := range fields {
-		event = event.Interface(key, value)
+	// Otimização: verificar se há campos antes de iterar
+	if len(fields) > 0 {
+		for key, value := range fields {
+			if key != "" && value != nil {
+				event = event.Interface(key, value)
+			}
+		}
 	}
 
 	event.Msg("Session event")
 }
 
-// LogError loga um erro da sessão
-func (s *SessionLogger) LogError(err error, operation string, fields map[string]interface{}) {
-	event := s.logger.Error().
-		Err(err).
-		Str("operation", operation)
+// LogError loga um erro da sessão (otimizado)
+func (s *SessionLogger) LogError(err error, operation string, fields map[string]any) {
+	if err == nil {
+		return
+	}
 
-	for key, value := range fields {
-		event = event.Interface(key, value)
+	event := s.logger.Error().Err(err)
+
+	if operation != "" {
+		event = event.Str("operation", operation)
+	}
+
+	// Otimização: verificar se há campos antes de iterar
+	if len(fields) > 0 {
+		for key, value := range fields {
+			if key != "" && value != nil {
+				event = event.Interface(key, value)
+			}
+		}
 	}
 
 	event.Msg("Session error")
 }
 
-// LogStateChange loga mudança de estado da sessão
+// LogStateChange loga mudança de estado da sessão (otimizado)
 func (s *SessionLogger) LogStateChange(fromState, toState string, reason string) {
-	s.logger.Info().
-		Str("from_state", fromState).
-		Str("to_state", toState).
-		Str("reason", reason).
-		Msg("Session state changed")
+	if fromState == "" && toState == "" {
+		return
+	}
+
+	event := s.logger.Info()
+
+	if fromState != "" {
+		event = event.Str("from_state", fromState)
+	}
+	if toState != "" {
+		event = event.Str("to_state", toState)
+	}
+	if reason != "" {
+		event = event.Str("reason", reason)
+	}
+
+	event.Msg("Session state changed")
 }
