@@ -33,3 +33,33 @@ go.work.sum
 
 # Reference files
 reference
+
+# Assets folder
+assets/
+
+# Logs
+logs/
+*.log
+
+# Binary executable
+zmeow
+
+# Temporary files
+tmp_*
+*.tmp
+*.temp
+
+# Documentation build
+docs/
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Session data
+sessions/
+*.session
+
+# Cache
+*.cache
