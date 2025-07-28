@@ -6,7 +6,9 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	httpSwagger "github.com/swaggo/http-swagger/v2"
 
+	_ "zmeow/docs" // Swagger docs
 	"zmeow/internal/app/config"
 	"zmeow/internal/http/handlers"
 	appMiddleware "zmeow/internal/http/middleware"
@@ -91,6 +93,10 @@ func (r *Router) setupMiddlewares() {
 
 // setupRoutes configura as rotas da aplicação
 func (r *Router) setupRoutes() {
+	// Swagger documentation
+	r.Get("/swagger/doc.json", r.swaggerDocHandler)
+	r.Get("/swagger/*", httpSwagger.Handler())
+
 	// Health check
 	r.Get("/health", r.healthHandler.Health)
 
@@ -200,4 +206,10 @@ func (r *Router) setupRoutes() {
 			}
 		}`))
 	})
+}
+
+// swaggerDocHandler serve o JSON do Swagger
+func (r *Router) swaggerDocHandler(w http.ResponseWriter, req *http.Request) {
+	// Serve o arquivo swagger.json diretamente
+	http.ServeFile(w, req, "docs/swagger.json")
 }

@@ -14,18 +14,18 @@ import (
 
 // ChatHandler gerencia operações específicas de chat
 type ChatHandler struct {
-	logger                logger.Logger
-	sendTextUseCase       *messageUsecases.SendTextMessageUseCase
-	sendMediaUseCase      *messageUsecases.SendMediaMessageUseCase
-	sendLocationUseCase   *messageUsecases.SendLocationMessageUseCase
-	sendContactUseCase    *messageUsecases.SendContactMessageUseCase
-	sendStickerUseCase    *messageUsecases.SendStickerMessageUseCase
-	sendButtonsUseCase    *messageUsecases.SendButtonsMessageUseCase
-	sendListUseCase       *messageUsecases.SendListMessageUseCase
-	sendPollUseCase       *messageUsecases.SendPollMessageUseCase
-	editMessageUseCase    *messageUsecases.EditMessageUseCase
-	deleteMessageUseCase  *messageUsecases.DeleteMessageUseCase
-	reactMessageUseCase   *messageUsecases.ReactMessageUseCase
+	logger               logger.Logger
+	sendTextUseCase      *messageUsecases.SendTextMessageUseCase
+	sendMediaUseCase     *messageUsecases.SendMediaMessageUseCase
+	sendLocationUseCase  *messageUsecases.SendLocationMessageUseCase
+	sendContactUseCase   *messageUsecases.SendContactMessageUseCase
+	sendStickerUseCase   *messageUsecases.SendStickerMessageUseCase
+	sendButtonsUseCase   *messageUsecases.SendButtonsMessageUseCase
+	sendListUseCase      *messageUsecases.SendListMessageUseCase
+	sendPollUseCase      *messageUsecases.SendPollMessageUseCase
+	editMessageUseCase   *messageUsecases.EditMessageUseCase
+	deleteMessageUseCase *messageUsecases.DeleteMessageUseCase
+	reactMessageUseCase  *messageUsecases.ReactMessageUseCase
 }
 
 // NewChatHandler cria uma nova instância do ChatHandler
@@ -43,33 +43,33 @@ func NewChatHandler(
 	reactMessageUseCase *messageUsecases.ReactMessageUseCase,
 ) *ChatHandler {
 	return &ChatHandler{
-		logger:                logger.WithComponent("chat-handler"),
-		sendTextUseCase:       sendTextUseCase,
-		sendMediaUseCase:      sendMediaUseCase,
-		sendLocationUseCase:   sendLocationUseCase,
-		sendContactUseCase:    sendContactUseCase,
-		sendStickerUseCase:    sendStickerUseCase,
-		sendButtonsUseCase:    sendButtonsUseCase,
-		sendListUseCase:       sendListUseCase,
-		sendPollUseCase:       sendPollUseCase,
-		editMessageUseCase:    editMessageUseCase,
-		deleteMessageUseCase:  deleteMessageUseCase,
-		reactMessageUseCase:   reactMessageUseCase,
+		logger:               logger.WithComponent("chat-handler"),
+		sendTextUseCase:      sendTextUseCase,
+		sendMediaUseCase:     sendMediaUseCase,
+		sendLocationUseCase:  sendLocationUseCase,
+		sendContactUseCase:   sendContactUseCase,
+		sendStickerUseCase:   sendStickerUseCase,
+		sendButtonsUseCase:   sendButtonsUseCase,
+		sendListUseCase:      sendListUseCase,
+		sendPollUseCase:      sendPollUseCase,
+		editMessageUseCase:   editMessageUseCase,
+		deleteMessageUseCase: deleteMessageUseCase,
+		reactMessageUseCase:  reactMessageUseCase,
 	}
 }
 
 // ChatPresenceRequest representa a requisição para definir presença no chat
 type ChatPresenceRequest struct {
-	Phone string                    `json:"phone" validate:"required"`
-	State string                    `json:"state" validate:"required,oneof=composing recording paused"`
-	Media types.ChatPresenceMedia   `json:"media,omitempty"`
+	Phone string                  `json:"phone" validate:"required"`
+	State string                  `json:"state" validate:"required,oneof=composing recording paused"`
+	Media types.ChatPresenceMedia `json:"media,omitempty"`
 }
 
 // MarkReadRequest representa a requisição para marcar mensagens como lidas
 type MarkReadRequest struct {
-	MessageIDs []string   `json:"message_ids" validate:"required"`
-	Chat       types.JID  `json:"chat" validate:"required"`
-	Sender     types.JID  `json:"sender,omitempty"`
+	MessageIDs []string  `json:"message_ids" validate:"required"`
+	Chat       types.JID `json:"chat" validate:"required"`
+	Sender     types.JID `json:"sender,omitempty"`
 }
 
 // DownloadMediaRequest representa a requisição para download de mídia
@@ -79,6 +79,17 @@ type DownloadMediaRequest struct {
 }
 
 // SendChatPresence define a presença no chat (digitando, gravando, etc.)
+// @Summary Definir presença no chat
+// @Description Define o status de presença no chat (digitando, gravando áudio, pausado)
+// @Tags Chat
+// @Accept json
+// @Produce json
+// @Param sessionID path string true "ID da sessão (UUID)"
+// @Param request body object true "Dados da presença no chat"
+// @Success 200 {object} responses.SuccessResponse "Presença definida com sucesso"
+// @Failure 400 {object} responses.ErrorResponse "Dados inválidos"
+// @Failure 500 {object} responses.ErrorResponse "Erro interno do servidor"
+// @Router /chat/{sessionID}/presence [post]
 func (h *ChatHandler) SendChatPresence(w http.ResponseWriter, r *http.Request) {
 	sessionID := chi.URLParam(r, "sessionID")
 	if sessionID == "" {
@@ -95,7 +106,7 @@ func (h *ChatHandler) SendChatPresence(w http.ResponseWriter, r *http.Request) {
 
 	// TODO: Implementar lógica de presença no chat
 	// Aqui você implementaria a lógica usando o whatsmeow client
-	
+
 	h.logger.WithFields(map[string]interface{}{
 		"session_id": sessionID,
 		"phone":      req.Phone,
@@ -114,6 +125,17 @@ func (h *ChatHandler) SendChatPresence(w http.ResponseWriter, r *http.Request) {
 }
 
 // MarkAsRead marca mensagens como lidas
+// @Summary Marcar mensagens como lidas
+// @Description Marca uma ou mais mensagens como lidas em um chat específico
+// @Tags Chat
+// @Accept json
+// @Produce json
+// @Param sessionID path string true "ID da sessão (UUID)"
+// @Param request body object true "Dados das mensagens para marcar como lidas"
+// @Success 200 {object} responses.SuccessResponse "Mensagens marcadas como lidas com sucesso"
+// @Failure 400 {object} responses.ErrorResponse "Dados inválidos"
+// @Failure 500 {object} responses.ErrorResponse "Erro interno do servidor"
+// @Router /chat/{sessionID}/markread [post]
 func (h *ChatHandler) MarkAsRead(w http.ResponseWriter, r *http.Request) {
 	sessionID := chi.URLParam(r, "sessionID")
 	if sessionID == "" {
@@ -130,7 +152,7 @@ func (h *ChatHandler) MarkAsRead(w http.ResponseWriter, r *http.Request) {
 
 	// TODO: Implementar lógica de marcar como lida
 	// Aqui você implementaria a lógica usando o whatsmeow client
-	
+
 	h.logger.WithFields(map[string]interface{}{
 		"session_id":  sessionID,
 		"message_ids": req.MessageIDs,
@@ -149,6 +171,17 @@ func (h *ChatHandler) MarkAsRead(w http.ResponseWriter, r *http.Request) {
 }
 
 // DownloadImage faz download de uma imagem
+// @Summary Download de imagem
+// @Description Faz download de uma imagem de uma mensagem específica
+// @Tags Chat
+// @Accept json
+// @Produce json
+// @Param sessionID path string true "ID da sessão (UUID)"
+// @Param request body object true "Dados para download da imagem"
+// @Success 200 {object} responses.SuccessResponse "Download iniciado com sucesso"
+// @Failure 400 {object} responses.ErrorResponse "Dados inválidos"
+// @Failure 500 {object} responses.ErrorResponse "Erro interno do servidor"
+// @Router /chat/{sessionID}/downloadimage [post]
 func (h *ChatHandler) DownloadImage(w http.ResponseWriter, r *http.Request) {
 	sessionID := chi.URLParam(r, "sessionID")
 	if sessionID == "" {
@@ -165,7 +198,7 @@ func (h *ChatHandler) DownloadImage(w http.ResponseWriter, r *http.Request) {
 
 	// TODO: Implementar lógica de download de imagem
 	// Aqui você implementaria a lógica usando o whatsmeow client
-	
+
 	h.logger.WithFields(map[string]interface{}{
 		"session_id": sessionID,
 		"message_id": req.MessageID,
@@ -185,6 +218,17 @@ func (h *ChatHandler) DownloadImage(w http.ResponseWriter, r *http.Request) {
 }
 
 // DownloadVideo faz download de um vídeo
+// @Summary Download de vídeo
+// @Description Faz download de um vídeo de uma mensagem específica
+// @Tags Chat
+// @Accept json
+// @Produce json
+// @Param sessionID path string true "ID da sessão (UUID)"
+// @Param request body object true "Dados para download do vídeo"
+// @Success 200 {object} responses.SuccessResponse "Download iniciado com sucesso"
+// @Failure 400 {object} responses.ErrorResponse "Dados inválidos"
+// @Failure 500 {object} responses.ErrorResponse "Erro interno do servidor"
+// @Router /chat/{sessionID}/downloadvideo [post]
 func (h *ChatHandler) DownloadVideo(w http.ResponseWriter, r *http.Request) {
 	sessionID := chi.URLParam(r, "sessionID")
 	if sessionID == "" {
@@ -201,7 +245,7 @@ func (h *ChatHandler) DownloadVideo(w http.ResponseWriter, r *http.Request) {
 
 	// TODO: Implementar lógica de download de vídeo
 	// Aqui você implementaria a lógica usando o whatsmeow client
-	
+
 	h.logger.WithFields(map[string]interface{}{
 		"session_id": sessionID,
 		"message_id": req.MessageID,
@@ -221,6 +265,17 @@ func (h *ChatHandler) DownloadVideo(w http.ResponseWriter, r *http.Request) {
 }
 
 // DownloadAudio faz download de um áudio
+// @Summary Download de áudio
+// @Description Faz download de um áudio de uma mensagem específica
+// @Tags Chat
+// @Accept json
+// @Produce json
+// @Param sessionID path string true "ID da sessão (UUID)"
+// @Param request body object true "Dados para download do áudio"
+// @Success 200 {object} responses.SuccessResponse "Download iniciado com sucesso"
+// @Failure 400 {object} responses.ErrorResponse "Dados inválidos"
+// @Failure 500 {object} responses.ErrorResponse "Erro interno do servidor"
+// @Router /chat/{sessionID}/downloadaudio [post]
 func (h *ChatHandler) DownloadAudio(w http.ResponseWriter, r *http.Request) {
 	sessionID := chi.URLParam(r, "sessionID")
 	if sessionID == "" {
@@ -237,7 +292,7 @@ func (h *ChatHandler) DownloadAudio(w http.ResponseWriter, r *http.Request) {
 
 	// TODO: Implementar lógica de download de áudio
 	// Aqui você implementaria a lógica usando o whatsmeow client
-	
+
 	h.logger.WithFields(map[string]interface{}{
 		"session_id": sessionID,
 		"message_id": req.MessageID,
@@ -257,6 +312,17 @@ func (h *ChatHandler) DownloadAudio(w http.ResponseWriter, r *http.Request) {
 }
 
 // DownloadDocument faz download de um documento
+// @Summary Download de documento
+// @Description Faz download de um documento de uma mensagem específica
+// @Tags Chat
+// @Accept json
+// @Produce json
+// @Param sessionID path string true "ID da sessão (UUID)"
+// @Param request body object true "Dados para download do documento"
+// @Success 200 {object} responses.SuccessResponse "Download iniciado com sucesso"
+// @Failure 400 {object} responses.ErrorResponse "Dados inválidos"
+// @Failure 500 {object} responses.ErrorResponse "Erro interno do servidor"
+// @Router /chat/{sessionID}/downloaddocument [post]
 func (h *ChatHandler) DownloadDocument(w http.ResponseWriter, r *http.Request) {
 	sessionID := chi.URLParam(r, "sessionID")
 	if sessionID == "" {
@@ -273,7 +339,7 @@ func (h *ChatHandler) DownloadDocument(w http.ResponseWriter, r *http.Request) {
 
 	// TODO: Implementar lógica de download de documento
 	// Aqui você implementaria a lógica usando o whatsmeow client
-	
+
 	h.logger.WithFields(map[string]interface{}{
 		"session_id": sessionID,
 		"message_id": req.MessageID,

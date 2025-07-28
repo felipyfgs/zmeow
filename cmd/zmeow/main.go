@@ -1,3 +1,23 @@
+// Package main ZMeow API
+// @title           ZMeow WhatsApp API
+// @version         1.0
+// @description     API completa para integração com WhatsApp usando Go + Chi router. Permite gerenciar sessões, enviar mensagens, gerenciar grupos e muito mais.
+// @termsOfService  http://swagger.io/terms/
+
+// @contact.name   ZMeow API Support
+// @contact.url    http://www.swagger.io/support
+// @contact.email  support@zmeow.com
+
+// @license.name  MIT
+// @license.url   http://www.apache.org/licenses/LICENSE-2.0.html
+
+// @host      localhost:8080
+// @BasePath  /
+
+// @securityDefinitions.basic  BasicAuth
+
+// @externalDocs.description  OpenAPI
+// @externalDocs.url          https://swagger.io/resources/open-api/
 package main
 
 import (

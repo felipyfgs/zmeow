@@ -13,6 +13,27 @@ type APIResponse struct {
 	Error   *APIError   `json:"error,omitempty"`
 }
 
+// SuccessResponse representa uma resposta de sucesso para Swagger
+type SuccessResponse struct {
+	Success bool        `json:"success" example:"true"`
+	Message string      `json:"message" example:"Operação realizada com sucesso"`
+	Data    interface{} `json:"data,omitempty"`
+}
+
+// ErrorResponse representa uma resposta de erro para Swagger
+type ErrorResponse struct {
+	Success bool      `json:"success" example:"false"`
+	Message string    `json:"message" example:"Erro na operação"`
+	Error   *APIError `json:"error,omitempty"`
+}
+
+// CreatedResponse representa uma resposta de criação para Swagger
+type CreatedResponse struct {
+	Success bool        `json:"success" example:"true"`
+	Message string      `json:"message" example:"Recurso criado com sucesso"`
+	Data    interface{} `json:"data,omitempty"`
+}
+
 // APIError representa detalhes de erro na resposta
 type APIError struct {
 	Code    string `json:"code"`
@@ -88,6 +109,7 @@ func Error500(w http.ResponseWriter, message, code, details string) {
 		Details: details,
 	})
 }
+
 // Success200 escreve uma resposta de sucesso (200)
 func Success200(w http.ResponseWriter, message string, data interface{}) {
 	WriteJSON(w, http.StatusOK, true, message, data, nil)

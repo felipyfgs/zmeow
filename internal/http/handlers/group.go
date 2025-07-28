@@ -77,7 +77,17 @@ func NewGroupHandler(
 }
 
 // CreateGroup cria um novo grupo
-// POST /groups/{sessionID}/create
+// @Summary Criar grupo
+// @Description Cria um novo grupo do WhatsApp com participantes especificados
+// @Tags Grupos
+// @Accept json
+// @Produce json
+// @Param sessionID path string true "ID da sessão (UUID)"
+// @Param request body object true "Dados para criação do grupo"
+// @Success 201 {object} responses.SuccessResponse "Grupo criado com sucesso"
+// @Failure 400 {object} responses.ErrorResponse "Dados inválidos"
+// @Failure 500 {object} responses.ErrorResponse "Erro interno do servidor"
+// @Router /groups/{sessionID}/create [post]
 func (h *GroupHandler) CreateGroup(w http.ResponseWriter, r *http.Request) {
 	sessionIDStr := chi.URLParam(r, "sessionID")
 	sessionID, err := uuid.Parse(sessionIDStr)
@@ -122,7 +132,16 @@ func (h *GroupHandler) CreateGroup(w http.ResponseWriter, r *http.Request) {
 }
 
 // ListGroups lista todos os grupos da sessão
-// GET /groups/{sessionID}/list
+// @Summary Listar grupos
+// @Description Lista todos os grupos dos quais a sessão faz parte
+// @Tags Grupos
+// @Accept json
+// @Produce json
+// @Param sessionID path string true "ID da sessão (UUID)"
+// @Success 200 {object} responses.SuccessResponse "Grupos listados com sucesso"
+// @Failure 400 {object} responses.ErrorResponse "Dados inválidos"
+// @Failure 500 {object} responses.ErrorResponse "Erro interno do servidor"
+// @Router /groups/{sessionID}/list [get]
 func (h *GroupHandler) ListGroups(w http.ResponseWriter, r *http.Request) {
 	sessionIDStr := chi.URLParam(r, "sessionID")
 	sessionID, err := uuid.Parse(sessionIDStr)
@@ -151,7 +170,17 @@ func (h *GroupHandler) ListGroups(w http.ResponseWriter, r *http.Request) {
 }
 
 // GetGroupInfo obtém informações de um grupo específico
-// GET /groups/{sessionID}/info?groupJid={groupJid}
+// @Summary Obter informações do grupo
+// @Description Obtém informações detalhadas de um grupo específico
+// @Tags Grupos
+// @Accept json
+// @Produce json
+// @Param sessionID path string true "ID da sessão (UUID)"
+// @Param groupJid query string true "JID do grupo"
+// @Success 200 {object} responses.SuccessResponse "Informações obtidas com sucesso"
+// @Failure 400 {object} responses.ErrorResponse "Dados inválidos"
+// @Failure 500 {object} responses.ErrorResponse "Erro interno do servidor"
+// @Router /groups/{sessionID}/info [get]
 func (h *GroupHandler) GetGroupInfo(w http.ResponseWriter, r *http.Request) {
 	sessionIDStr := chi.URLParam(r, "sessionID")
 	sessionID, err := uuid.Parse(sessionIDStr)
@@ -208,7 +237,17 @@ func (h *GroupHandler) validateCreateGroupRequest(req group.CreateGroupRequest) 
 }
 
 // UpdateParticipants atualiza participantes do grupo (adicionar, remover, promover, rebaixar)
-// POST /groups/{sessionID}/participants/update
+// @Summary Atualizar participantes do grupo
+// @Description Adiciona, remove, promove ou rebaixa participantes de um grupo
+// @Tags Grupos
+// @Accept json
+// @Produce json
+// @Param sessionID path string true "ID da sessão (UUID)"
+// @Param request body object true "Dados para atualização dos participantes"
+// @Success 200 {object} responses.SuccessResponse "Participantes atualizados com sucesso"
+// @Failure 400 {object} responses.ErrorResponse "Dados inválidos"
+// @Failure 500 {object} responses.ErrorResponse "Erro interno do servidor"
+// @Router /groups/{sessionID}/participants/update [post]
 func (h *GroupHandler) UpdateParticipants(w http.ResponseWriter, r *http.Request) {
 	sessionIDStr := chi.URLParam(r, "sessionID")
 	sessionID, err := uuid.Parse(sessionIDStr)
@@ -254,7 +293,17 @@ func (h *GroupHandler) UpdateParticipants(w http.ResponseWriter, r *http.Request
 }
 
 // LeaveGroup sai de um grupo
-// POST /groups/{sessionID}/leave
+// @Summary Sair do grupo
+// @Description Remove a sessão atual de um grupo específico
+// @Tags Grupos
+// @Accept json
+// @Produce json
+// @Param sessionID path string true "ID da sessão (UUID)"
+// @Param request body object true "Dados para sair do grupo"
+// @Success 200 {object} responses.SuccessResponse "Saiu do grupo com sucesso"
+// @Failure 400 {object} responses.ErrorResponse "Dados inválidos"
+// @Failure 500 {object} responses.ErrorResponse "Erro interno do servidor"
+// @Router /groups/{sessionID}/leave [post]
 func (h *GroupHandler) LeaveGroup(w http.ResponseWriter, r *http.Request) {
 	sessionIDStr := chi.URLParam(r, "sessionID")
 	sessionID, err := uuid.Parse(sessionIDStr)
@@ -358,6 +407,17 @@ func getActionDescription(action string) string {
 }
 
 // SetGroupName define o nome do grupo
+// @Summary Definir nome do grupo
+// @Description Define ou altera o nome de um grupo específico
+// @Tags Grupos
+// @Accept json
+// @Produce json
+// @Param sessionID path string true "ID da sessão (UUID)"
+// @Param request body object true "Dados para definir nome do grupo"
+// @Success 200 {object} responses.SuccessResponse "Nome do grupo definido com sucesso"
+// @Failure 400 {object} responses.ErrorResponse "Dados inválidos"
+// @Failure 500 {object} responses.ErrorResponse "Erro interno do servidor"
+// @Router /groups/{sessionID}/settings/name [post]
 func (h *GroupHandler) SetGroupName(w http.ResponseWriter, r *http.Request) {
 	// Extrair session ID da URL
 	sessionIDStr := chi.URLParam(r, "sessionID")
@@ -417,6 +477,17 @@ func (h *GroupHandler) validateSetGroupNameRequest(req group.SetGroupNameRequest
 }
 
 // SetGroupTopic define o tópico do grupo
+// @Summary Definir tópico do grupo
+// @Description Define ou altera o tópico/descrição de um grupo específico
+// @Tags Grupos
+// @Accept json
+// @Produce json
+// @Param sessionID path string true "ID da sessão (UUID)"
+// @Param request body object true "Dados para definir tópico do grupo"
+// @Success 200 {object} responses.SuccessResponse "Tópico do grupo definido com sucesso"
+// @Failure 400 {object} responses.ErrorResponse "Dados inválidos"
+// @Failure 500 {object} responses.ErrorResponse "Erro interno do servidor"
+// @Router /groups/{sessionID}/settings/topic [post]
 func (h *GroupHandler) SetGroupTopic(w http.ResponseWriter, r *http.Request) {
 	// Extrair session ID da URL
 	sessionIDStr := chi.URLParam(r, "sessionID")
@@ -472,6 +543,17 @@ func (h *GroupHandler) validateSetGroupTopicRequest(req group.SetGroupTopicReque
 }
 
 // SetGroupPhoto define a foto do grupo (suporta JSON, form-data, base64, URL)
+// @Summary Definir foto do grupo
+// @Description Define ou altera a foto de um grupo específico (suporta JSON, form-data, base64, URL)
+// @Tags Grupos
+// @Accept json,multipart/form-data
+// @Produce json
+// @Param sessionID path string true "ID da sessão (UUID)"
+// @Param request body object true "Dados para definir foto do grupo"
+// @Success 200 {object} responses.SuccessResponse "Foto do grupo definida com sucesso"
+// @Failure 400 {object} responses.ErrorResponse "Dados inválidos"
+// @Failure 500 {object} responses.ErrorResponse "Erro interno do servidor"
+// @Router /groups/{sessionID}/settings/photo [post]
 func (h *GroupHandler) SetGroupPhoto(w http.ResponseWriter, r *http.Request) {
 	// Extrair session ID da URL
 	sessionIDStr := chi.URLParam(r, "sessionID")
@@ -529,6 +611,17 @@ func (h *GroupHandler) SetGroupPhoto(w http.ResponseWriter, r *http.Request) {
 }
 
 // RemoveGroupPhoto remove a foto do grupo
+// @Summary Remover foto do grupo
+// @Description Remove a foto atual de um grupo específico
+// @Tags Grupos
+// @Accept json
+// @Produce json
+// @Param sessionID path string true "ID da sessão (UUID)"
+// @Param request body object true "Dados para remover foto do grupo"
+// @Success 200 {object} responses.SuccessResponse "Foto removida com sucesso"
+// @Failure 400 {object} responses.ErrorResponse "Dados inválidos"
+// @Failure 500 {object} responses.ErrorResponse "Erro interno do servidor"
+// @Router /groups/{sessionID}/settings/photo [delete]
 func (h *GroupHandler) RemoveGroupPhoto(w http.ResponseWriter, r *http.Request) {
 	// Extrair session ID da URL
 	sessionIDStr := chi.URLParam(r, "sessionID")
@@ -571,6 +664,17 @@ func (h *GroupHandler) RemoveGroupPhoto(w http.ResponseWriter, r *http.Request) 
 }
 
 // SetGroupAnnounce configura o modo anúncio do grupo
+// @Summary Configurar modo anúncio do grupo
+// @Description Configura se apenas administradores podem enviar mensagens no grupo
+// @Tags Grupos
+// @Accept json
+// @Produce json
+// @Param sessionID path string true "ID da sessão (UUID)"
+// @Param request body object true "Dados para configurar modo anúncio"
+// @Success 200 {object} responses.SuccessResponse "Modo anúncio configurado com sucesso"
+// @Failure 400 {object} responses.ErrorResponse "Dados inválidos"
+// @Failure 500 {object} responses.ErrorResponse "Erro interno do servidor"
+// @Router /groups/{sessionID}/settings/announce [post]
 func (h *GroupHandler) SetGroupAnnounce(w http.ResponseWriter, r *http.Request) {
 	// Extrair session ID da URL
 	sessionIDStr := chi.URLParam(r, "sessionID")
@@ -613,6 +717,17 @@ func (h *GroupHandler) SetGroupAnnounce(w http.ResponseWriter, r *http.Request) 
 }
 
 // SetGroupLocked configura o modo bloqueado do grupo
+// @Summary Configurar modo bloqueado do grupo
+// @Description Configura se apenas administradores podem editar informações do grupo
+// @Tags Grupos
+// @Accept json
+// @Produce json
+// @Param sessionID path string true "ID da sessão (UUID)"
+// @Param request body object true "Dados para configurar modo bloqueado"
+// @Success 200 {object} responses.SuccessResponse "Modo bloqueado configurado com sucesso"
+// @Failure 400 {object} responses.ErrorResponse "Dados inválidos"
+// @Failure 500 {object} responses.ErrorResponse "Erro interno do servidor"
+// @Router /groups/{sessionID}/settings/locked [post]
 func (h *GroupHandler) SetGroupLocked(w http.ResponseWriter, r *http.Request) {
 	// Extrair session ID da URL
 	sessionIDStr := chi.URLParam(r, "sessionID")
@@ -655,6 +770,17 @@ func (h *GroupHandler) SetGroupLocked(w http.ResponseWriter, r *http.Request) {
 }
 
 // SetDisappearingTimer configura o timer de mensagens temporárias do grupo
+// @Summary Configurar timer de mensagens temporárias
+// @Description Configura o tempo para mensagens desaparecerem automaticamente no grupo
+// @Tags Grupos
+// @Accept json
+// @Produce json
+// @Param sessionID path string true "ID da sessão (UUID)"
+// @Param request body object true "Dados para configurar timer de mensagens temporárias"
+// @Success 200 {object} responses.SuccessResponse "Timer configurado com sucesso"
+// @Failure 400 {object} responses.ErrorResponse "Dados inválidos"
+// @Failure 500 {object} responses.ErrorResponse "Erro interno do servidor"
+// @Router /groups/{sessionID}/settings/disappearing [post]
 func (h *GroupHandler) SetDisappearingTimer(w http.ResponseWriter, r *http.Request) {
 	// Extrair session ID da URL
 	sessionIDStr := chi.URLParam(r, "sessionID")
@@ -802,6 +928,18 @@ func (h *GroupHandler) parseFormDataPhoto(r *http.Request, req *group.SetGroupPh
 }
 
 // GetGroupInviteLink obtém o link de convite do grupo
+// @Summary Obter link de convite do grupo
+// @Description Obtém o link de convite de um grupo específico, com opção de resetar o link
+// @Tags Grupos
+// @Accept json
+// @Produce json
+// @Param sessionID path string true "ID da sessão (UUID)"
+// @Param groupJID query string true "JID do grupo"
+// @Param reset query boolean false "Resetar o link de convite (padrão: false)"
+// @Success 200 {object} responses.SuccessResponse "Link obtido com sucesso"
+// @Failure 400 {object} responses.ErrorResponse "Dados inválidos"
+// @Failure 500 {object} responses.ErrorResponse "Erro interno do servidor"
+// @Router /groups/{sessionID}/invite/link [get]
 func (h *GroupHandler) GetGroupInviteLink(w http.ResponseWriter, r *http.Request) {
 	h.logger.Info().Msg("Getting group invite link")
 
@@ -853,6 +991,17 @@ func (h *GroupHandler) GetGroupInviteLink(w http.ResponseWriter, r *http.Request
 }
 
 // JoinGroupWithLink entra em um grupo usando um link de convite
+// @Summary Entrar no grupo via link de convite
+// @Description Entra em um grupo específico usando um código de convite
+// @Tags Grupos
+// @Accept json
+// @Produce json
+// @Param sessionID path string true "ID da sessão (UUID)"
+// @Param request body object true "Dados para entrar no grupo"
+// @Success 200 {object} responses.SuccessResponse "Entrou no grupo com sucesso"
+// @Failure 400 {object} responses.ErrorResponse "Dados inválidos"
+// @Failure 500 {object} responses.ErrorResponse "Erro interno do servidor"
+// @Router /groups/{sessionID}/invite/join [post]
 func (h *GroupHandler) JoinGroupWithLink(w http.ResponseWriter, r *http.Request) {
 	h.logger.Info().Msg("Joining group with invite link")
 
@@ -899,6 +1048,18 @@ func (h *GroupHandler) JoinGroupWithLink(w http.ResponseWriter, r *http.Request)
 }
 
 // GetGroupInviteInfo obtém informações de um convite de grupo
+// GetGroupInviteInfo obtém informações de um convite de grupo
+// @Summary Obter informações do convite
+// @Description Obtém informações detalhadas de um convite de grupo usando o código
+// @Tags Grupos
+// @Accept json
+// @Produce json
+// @Param sessionID path string true "ID da sessão (UUID)"
+// @Param request body object true "Dados para obter informações do convite"
+// @Success 200 {object} responses.SuccessResponse "Informações obtidas com sucesso"
+// @Failure 400 {object} responses.ErrorResponse "Dados inválidos"
+// @Failure 500 {object} responses.ErrorResponse "Erro interno do servidor"
+// @Router /groups/{sessionID}/invite/info [post]
 func (h *GroupHandler) GetGroupInviteInfo(w http.ResponseWriter, r *http.Request) {
 	h.logger.Info().Msg("Getting group invite info")
 

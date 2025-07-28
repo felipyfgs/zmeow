@@ -67,7 +67,17 @@ func NewMessageHandler(
 }
 
 // SendTextMessage envia uma mensagem de texto
-// POST /messages/{sessionID}/send/text
+// @Summary Enviar mensagem de texto
+// @Description Envia uma mensagem de texto para um número específico através de uma sessão ativa
+// @Tags Mensagens
+// @Accept json
+// @Produce json
+// @Param sessionID path string true "ID da sessão (UUID)"
+// @Param request body object true "Dados da mensagem de texto"
+// @Success 200 {object} responses.SuccessResponse "Mensagem enviada com sucesso"
+// @Failure 400 {object} responses.ErrorResponse "Dados inválidos"
+// @Failure 500 {object} responses.ErrorResponse "Erro interno do servidor"
+// @Router /messages/{sessionID}/send/text [post]
 func (h *MessageHandler) SendTextMessage(w http.ResponseWriter, r *http.Request) {
 	sessionIDStr := chi.URLParam(r, "sessionID")
 	sessionID, err := uuid.Parse(sessionIDStr)
@@ -95,8 +105,17 @@ func (h *MessageHandler) SendTextMessage(w http.ResponseWriter, r *http.Request)
 }
 
 // SendMediaMessage envia mídia unificada (imagem, áudio, vídeo, documento)
-// POST /messages/{sessionID}/send/media
-// Suporta três formatos: JSON com URL/Base64, form-data para upload direto
+// @Summary Enviar mídia (imagem, áudio, vídeo, documento)
+// @Description Envia mídia para um número específico. Suporta três formatos: JSON com URL/Base64, form-data para upload direto
+// @Tags Mensagens
+// @Accept json,multipart/form-data
+// @Produce json
+// @Param sessionID path string true "ID da sessão (UUID)"
+// @Param request body object true "Dados da mídia (JSON)" SchemaExample({"number": "5511999999999", "mediaType": "image", "media": "https://example.com/image.jpg", "caption": "Minha imagem"})
+// @Success 200 {object} responses.SuccessResponse "Mídia enviada com sucesso"
+// @Failure 400 {object} responses.ErrorResponse "Dados inválidos"
+// @Failure 500 {object} responses.ErrorResponse "Erro interno do servidor"
+// @Router /messages/{sessionID}/send/media [post]
 func (h *MessageHandler) SendMediaMessage(w http.ResponseWriter, r *http.Request) {
 	sessionIDStr := chi.URLParam(r, "sessionID")
 	sessionID, err := uuid.Parse(sessionIDStr)
@@ -146,7 +165,17 @@ func (h *MessageHandler) SendMediaMessage(w http.ResponseWriter, r *http.Request
 }
 
 // SendImageMessage envia uma imagem
-// POST /messages/{sessionID}/send/image
+// @Summary Enviar imagem
+// @Description Envia uma imagem para um número específico
+// @Tags Mensagens
+// @Accept json
+// @Produce json
+// @Param sessionID path string true "ID da sessão (UUID)"
+// @Param request body object true "Dados da imagem"
+// @Success 200 {object} responses.SuccessResponse "Imagem enviada com sucesso"
+// @Failure 400 {object} responses.ErrorResponse "Dados inválidos"
+// @Failure 500 {object} responses.ErrorResponse "Erro interno do servidor"
+// @Router /messages/{sessionID}/send/image [post]
 func (h *MessageHandler) SendImageMessage(w http.ResponseWriter, r *http.Request) {
 	sessionIDStr := chi.URLParam(r, "sessionID")
 	sessionID, err := uuid.Parse(sessionIDStr)
@@ -185,7 +214,17 @@ func (h *MessageHandler) SendImageMessage(w http.ResponseWriter, r *http.Request
 }
 
 // SendAudioMessage envia um áudio
-// POST /messages/{sessionID}/send/audio
+// @Summary Enviar áudio
+// @Description Envia um arquivo de áudio para um número específico
+// @Tags Mensagens
+// @Accept json
+// @Produce json
+// @Param sessionID path string true "ID da sessão (UUID)"
+// @Param request body object true "Dados do áudio"
+// @Success 200 {object} responses.SuccessResponse "Áudio enviado com sucesso"
+// @Failure 400 {object} responses.ErrorResponse "Dados inválidos"
+// @Failure 500 {object} responses.ErrorResponse "Erro interno do servidor"
+// @Router /messages/{sessionID}/send/audio [post]
 func (h *MessageHandler) SendAudioMessage(w http.ResponseWriter, r *http.Request) {
 	sessionIDStr := chi.URLParam(r, "sessionID")
 	sessionID, err := uuid.Parse(sessionIDStr)
@@ -224,7 +263,17 @@ func (h *MessageHandler) SendAudioMessage(w http.ResponseWriter, r *http.Request
 }
 
 // SendVideoMessage envia um vídeo
-// POST /messages/{sessionID}/send/video
+// @Summary Enviar vídeo
+// @Description Envia um arquivo de vídeo para um número específico
+// @Tags Mensagens
+// @Accept json
+// @Produce json
+// @Param sessionID path string true "ID da sessão (UUID)"
+// @Param request body object true "Dados do vídeo"
+// @Success 200 {object} responses.SuccessResponse "Vídeo enviado com sucesso"
+// @Failure 400 {object} responses.ErrorResponse "Dados inválidos"
+// @Failure 500 {object} responses.ErrorResponse "Erro interno do servidor"
+// @Router /messages/{sessionID}/send/video [post]
 func (h *MessageHandler) SendVideoMessage(w http.ResponseWriter, r *http.Request) {
 	sessionIDStr := chi.URLParam(r, "sessionID")
 	sessionID, err := uuid.Parse(sessionIDStr)
@@ -263,7 +312,17 @@ func (h *MessageHandler) SendVideoMessage(w http.ResponseWriter, r *http.Request
 }
 
 // SendDocumentMessage envia um documento
-// POST /messages/{sessionID}/send/document
+// @Summary Enviar documento
+// @Description Envia um arquivo de documento para um número específico
+// @Tags Mensagens
+// @Accept json
+// @Produce json
+// @Param sessionID path string true "ID da sessão (UUID)"
+// @Param request body object true "Dados do documento"
+// @Success 200 {object} responses.SuccessResponse "Documento enviado com sucesso"
+// @Failure 400 {object} responses.ErrorResponse "Dados inválidos"
+// @Failure 500 {object} responses.ErrorResponse "Erro interno do servidor"
+// @Router /messages/{sessionID}/send/document [post]
 func (h *MessageHandler) SendDocumentMessage(w http.ResponseWriter, r *http.Request) {
 	sessionIDStr := chi.URLParam(r, "sessionID")
 	sessionID, err := uuid.Parse(sessionIDStr)
@@ -303,7 +362,17 @@ func (h *MessageHandler) SendDocumentMessage(w http.ResponseWriter, r *http.Requ
 }
 
 // SendLocationMessage envia uma localização
-// POST /messages/{sessionID}/send/location
+// @Summary Enviar localização
+// @Description Envia uma localização (latitude e longitude) para um número específico
+// @Tags Mensagens
+// @Accept json
+// @Produce json
+// @Param sessionID path string true "ID da sessão (UUID)"
+// @Param request body object true "Dados da localização"
+// @Success 200 {object} responses.SuccessResponse "Localização enviada com sucesso"
+// @Failure 400 {object} responses.ErrorResponse "Dados inválidos"
+// @Failure 500 {object} responses.ErrorResponse "Erro interno do servidor"
+// @Router /messages/{sessionID}/send/location [post]
 func (h *MessageHandler) SendLocationMessage(w http.ResponseWriter, r *http.Request) {
 	sessionIDStr := chi.URLParam(r, "sessionID")
 	sessionID, err := uuid.Parse(sessionIDStr)
@@ -331,7 +400,17 @@ func (h *MessageHandler) SendLocationMessage(w http.ResponseWriter, r *http.Requ
 }
 
 // SendContactMessage envia um contato
-// POST /messages/{sessionID}/send/contact
+// @Summary Enviar contato
+// @Description Envia informações de contato para um número específico
+// @Tags Mensagens
+// @Accept json
+// @Produce json
+// @Param sessionID path string true "ID da sessão (UUID)"
+// @Param request body object true "Dados do contato"
+// @Success 200 {object} responses.SuccessResponse "Contato enviado com sucesso"
+// @Failure 400 {object} responses.ErrorResponse "Dados inválidos"
+// @Failure 500 {object} responses.ErrorResponse "Erro interno do servidor"
+// @Router /messages/{sessionID}/send/contact [post]
 func (h *MessageHandler) SendContactMessage(w http.ResponseWriter, r *http.Request) {
 	sessionIDStr := chi.URLParam(r, "sessionID")
 	sessionID, err := uuid.Parse(sessionIDStr)
@@ -359,7 +438,17 @@ func (h *MessageHandler) SendContactMessage(w http.ResponseWriter, r *http.Reque
 }
 
 // SendStickerMessage envia um sticker
-// POST /messages/{sessionID}/send/sticker
+// @Summary Enviar sticker
+// @Description Envia um sticker para um número específico
+// @Tags Mensagens
+// @Accept json
+// @Produce json
+// @Param sessionID path string true "ID da sessão (UUID)"
+// @Param request body object true "Dados do sticker"
+// @Success 200 {object} responses.SuccessResponse "Sticker enviado com sucesso"
+// @Failure 400 {object} responses.ErrorResponse "Dados inválidos"
+// @Failure 500 {object} responses.ErrorResponse "Erro interno do servidor"
+// @Router /messages/{sessionID}/send/sticker [post]
 func (h *MessageHandler) SendStickerMessage(w http.ResponseWriter, r *http.Request) {
 	sessionIDStr := chi.URLParam(r, "sessionID")
 	sessionID, err := uuid.Parse(sessionIDStr)
@@ -387,7 +476,17 @@ func (h *MessageHandler) SendStickerMessage(w http.ResponseWriter, r *http.Reque
 }
 
 // SendButtonsMessage envia mensagem com botões
-// POST /messages/{sessionID}/send/buttons
+// @Summary Enviar mensagem com botões
+// @Description Envia uma mensagem interativa com botões para um número específico
+// @Tags Mensagens
+// @Accept json
+// @Produce json
+// @Param sessionID path string true "ID da sessão (UUID)"
+// @Param request body object true "Dados da mensagem com botões"
+// @Success 200 {object} responses.SuccessResponse "Mensagem com botões enviada com sucesso"
+// @Failure 400 {object} responses.ErrorResponse "Dados inválidos"
+// @Failure 500 {object} responses.ErrorResponse "Erro interno do servidor"
+// @Router /messages/{sessionID}/send/buttons [post]
 func (h *MessageHandler) SendButtonsMessage(w http.ResponseWriter, r *http.Request) {
 	sessionIDStr := chi.URLParam(r, "sessionID")
 	sessionID, err := uuid.Parse(sessionIDStr)
@@ -415,7 +514,17 @@ func (h *MessageHandler) SendButtonsMessage(w http.ResponseWriter, r *http.Reque
 }
 
 // SendListMessage envia mensagem com lista
-// POST /messages/{sessionID}/send/list
+// @Summary Enviar mensagem com lista
+// @Description Envia uma mensagem interativa com lista de opções para um número específico
+// @Tags Mensagens
+// @Accept json
+// @Produce json
+// @Param sessionID path string true "ID da sessão (UUID)"
+// @Param request body object true "Dados da mensagem com lista"
+// @Success 200 {object} responses.SuccessResponse "Mensagem com lista enviada com sucesso"
+// @Failure 400 {object} responses.ErrorResponse "Dados inválidos"
+// @Failure 500 {object} responses.ErrorResponse "Erro interno do servidor"
+// @Router /messages/{sessionID}/send/list [post]
 func (h *MessageHandler) SendListMessage(w http.ResponseWriter, r *http.Request) {
 	sessionIDStr := chi.URLParam(r, "sessionID")
 	sessionID, err := uuid.Parse(sessionIDStr)
@@ -443,7 +552,17 @@ func (h *MessageHandler) SendListMessage(w http.ResponseWriter, r *http.Request)
 }
 
 // SendPollMessage envia enquete
-// POST /messages/{sessionID}/send/poll
+// @Summary Enviar enquete
+// @Description Envia uma enquete com opções de resposta para um número específico
+// @Tags Mensagens
+// @Accept json
+// @Produce json
+// @Param sessionID path string true "ID da sessão (UUID)"
+// @Param request body object true "Dados da enquete"
+// @Success 200 {object} responses.SuccessResponse "Enquete enviada com sucesso"
+// @Failure 400 {object} responses.ErrorResponse "Dados inválidos"
+// @Failure 500 {object} responses.ErrorResponse "Erro interno do servidor"
+// @Router /messages/{sessionID}/send/poll [post]
 func (h *MessageHandler) SendPollMessage(w http.ResponseWriter, r *http.Request) {
 	sessionIDStr := chi.URLParam(r, "sessionID")
 	sessionID, err := uuid.Parse(sessionIDStr)
@@ -471,7 +590,17 @@ func (h *MessageHandler) SendPollMessage(w http.ResponseWriter, r *http.Request)
 }
 
 // EditMessage edita mensagem existente
-// POST /messages/{sessionID}/send/edit
+// @Summary Editar mensagem
+// @Description Edita o conteúdo de uma mensagem já enviada
+// @Tags Mensagens
+// @Accept json
+// @Produce json
+// @Param sessionID path string true "ID da sessão (UUID)"
+// @Param request body object true "Dados para edição da mensagem"
+// @Success 200 {object} responses.SuccessResponse "Mensagem editada com sucesso"
+// @Failure 400 {object} responses.ErrorResponse "Dados inválidos"
+// @Failure 500 {object} responses.ErrorResponse "Erro interno do servidor"
+// @Router /messages/{sessionID}/send/edit [post]
 func (h *MessageHandler) EditMessage(w http.ResponseWriter, r *http.Request) {
 	sessionIDStr := chi.URLParam(r, "sessionID")
 	sessionID, err := uuid.Parse(sessionIDStr)
@@ -499,7 +628,17 @@ func (h *MessageHandler) EditMessage(w http.ResponseWriter, r *http.Request) {
 }
 
 // DeleteMessage deleta uma mensagem
-// POST /messages/{sessionID}/delete
+// @Summary Deletar mensagem
+// @Description Deleta uma mensagem específica do chat
+// @Tags Mensagens
+// @Accept json
+// @Produce json
+// @Param sessionID path string true "ID da sessão (UUID)"
+// @Param request body object true "Dados para deletar a mensagem"
+// @Success 200 {object} responses.SuccessResponse "Mensagem deletada com sucesso"
+// @Failure 400 {object} responses.ErrorResponse "Dados inválidos"
+// @Failure 500 {object} responses.ErrorResponse "Erro interno do servidor"
+// @Router /messages/{sessionID}/delete [post]
 func (h *MessageHandler) DeleteMessage(w http.ResponseWriter, r *http.Request) {
 	sessionIDStr := chi.URLParam(r, "sessionID")
 	sessionID, err := uuid.Parse(sessionIDStr)
@@ -527,7 +666,17 @@ func (h *MessageHandler) DeleteMessage(w http.ResponseWriter, r *http.Request) {
 }
 
 // ReactMessage reage a uma mensagem
-// POST /messages/{sessionID}/react
+// @Summary Reagir a mensagem
+// @Description Adiciona uma reação (emoji) a uma mensagem específica
+// @Tags Mensagens
+// @Accept json
+// @Produce json
+// @Param sessionID path string true "ID da sessão (UUID)"
+// @Param request body object true "Dados da reação"
+// @Success 200 {object} responses.SuccessResponse "Reação enviada com sucesso"
+// @Failure 400 {object} responses.ErrorResponse "Dados inválidos"
+// @Failure 500 {object} responses.ErrorResponse "Erro interno do servidor"
+// @Router /messages/{sessionID}/react [post]
 func (h *MessageHandler) ReactMessage(w http.ResponseWriter, r *http.Request) {
 	sessionIDStr := chi.URLParam(r, "sessionID")
 	sessionID, err := uuid.Parse(sessionIDStr)

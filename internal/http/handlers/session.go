@@ -57,7 +57,17 @@ func NewSessionHandler(
 }
 
 // AddSession cria uma nova sessão
-// POST /sessions/add
+// @Summary      Criar Nova Sessão
+// @Description  Cria uma nova sessão WhatsApp com nome único
+// @Tags         sessions
+// @Accept       json
+// @Produce      json
+// @Param request body object true  "Dados da sessão"
+// @Success      201      {object}  responses.CreatedResponse  "Sessão criada com sucesso"
+// @Failure      400      {object}  responses.ErrorResponse  "Dados inválidos"
+// @Failure      409      {object}  responses.ErrorResponse  "Sessão já existe"
+// @Failure      500      {object}  responses.ErrorResponse  "Erro interno"
+// @Router       /sessions/add [post]
 func (h *SessionHandler) AddSession(w http.ResponseWriter, r *http.Request) {
 	var req session.CreateSessionRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -77,7 +87,14 @@ func (h *SessionHandler) AddSession(w http.ResponseWriter, r *http.Request) {
 }
 
 // ListSessions lista todas as sessões
-// GET /sessions/list
+// @Summary      Listar Sessões
+// @Description  Lista todas as sessões WhatsApp cadastradas
+// @Tags         sessions
+// @Accept       json
+// @Produce      json
+// @Success      200  {object}  responses.SuccessResponse  "Lista de sessões"
+// @Failure      500  {object}  responses.ErrorResponse  "Erro interno"
+// @Router       /sessions/list [get]
 func (h *SessionHandler) ListSessions(w http.ResponseWriter, r *http.Request) {
 	sessions, err := h.listUseCase.Execute(r.Context())
 	if err != nil {
@@ -90,7 +107,17 @@ func (h *SessionHandler) ListSessions(w http.ResponseWriter, r *http.Request) {
 }
 
 // GetSession obtém uma sessão específica
-// GET /sessions/{sessionID}
+// @Summary      Obter Sessão
+// @Description  Obtém informações de uma sessão específica pelo ID
+// @Tags         sessions
+// @Accept       json
+// @Produce      json
+// @Param        sessionID  path      string  true  "ID da sessão (UUID)"
+// @Success      200        {object}  responses.SuccessResponse  "Sessão encontrada"
+// @Failure      400        {object}  responses.ErrorResponse  "ID inválido"
+// @Failure      404        {object}  responses.ErrorResponse  "Sessão não encontrada"
+// @Failure      500        {object}  responses.ErrorResponse  "Erro interno"
+// @Router       /sessions/{sessionID} [get]
 func (h *SessionHandler) GetSession(w http.ResponseWriter, r *http.Request) {
 	sessionIDStr := chi.URLParam(r, "sessionID")
 	sessionID, err := uuid.Parse(sessionIDStr)
@@ -111,7 +138,17 @@ func (h *SessionHandler) GetSession(w http.ResponseWriter, r *http.Request) {
 }
 
 // DeleteSession remove uma sessão
-// DELETE /sessions/{sessionID}
+// @Summary      Deletar Sessão
+// @Description  Remove uma sessão WhatsApp permanentemente
+// @Tags         sessions
+// @Accept       json
+// @Produce      json
+// @Param        sessionID  path      string  true  "ID da sessão (UUID)"
+// @Success      200        {object}  responses.SuccessResponse  "Sessão removida com sucesso"
+// @Failure      400        {object}  responses.ErrorResponse  "ID inválido"
+// @Failure      404        {object}  responses.ErrorResponse  "Sessão não encontrada"
+// @Failure      500        {object}  responses.ErrorResponse  "Erro interno"
+// @Router       /sessions/{sessionID} [delete]
 func (h *SessionHandler) DeleteSession(w http.ResponseWriter, r *http.Request) {
 	sessionIDStr := chi.URLParam(r, "sessionID")
 	sessionID, err := uuid.Parse(sessionIDStr)
@@ -132,7 +169,17 @@ func (h *SessionHandler) DeleteSession(w http.ResponseWriter, r *http.Request) {
 }
 
 // ConnectSession conecta uma sessão
-// POST /sessions/{sessionID}/connect
+// @Summary      Conectar Sessão
+// @Description  Inicia conexão de uma sessão WhatsApp
+// @Tags         sessions
+// @Accept       json
+// @Produce      json
+// @Param        sessionID  path      string  true  "ID da sessão (UUID)"
+// @Success      200        {object}  responses.SuccessResponse  "Conexão iniciada"
+// @Failure      400        {object}  responses.ErrorResponse  "ID inválido"
+// @Failure      404        {object}  responses.ErrorResponse  "Sessão não encontrada"
+// @Failure      500        {object}  responses.ErrorResponse  "Erro interno"
+// @Router       /sessions/{sessionID}/connect [post]
 func (h *SessionHandler) ConnectSession(w http.ResponseWriter, r *http.Request) {
 	sessionIDStr := chi.URLParam(r, "sessionID")
 	sessionID, err := uuid.Parse(sessionIDStr)
@@ -153,7 +200,17 @@ func (h *SessionHandler) ConnectSession(w http.ResponseWriter, r *http.Request) 
 }
 
 // LogoutSession desconecta uma sessão
-// POST /sessions/{sessionID}/logout
+// @Summary      Logout da Sessão
+// @Description  Realiza logout de uma sessão WhatsApp
+// @Tags         sessions
+// @Accept       json
+// @Produce      json
+// @Param        sessionID  path      string  true  "ID da sessão (UUID)"
+// @Success      200        {object}  responses.SuccessResponse  "Logout realizado com sucesso"
+// @Failure      400        {object}  responses.ErrorResponse  "ID inválido"
+// @Failure      404        {object}  responses.ErrorResponse  "Sessão não encontrada"
+// @Failure      500        {object}  responses.ErrorResponse  "Erro interno"
+// @Router       /sessions/{sessionID}/logout [post]
 func (h *SessionHandler) LogoutSession(w http.ResponseWriter, r *http.Request) {
 	sessionIDStr := chi.URLParam(r, "sessionID")
 	sessionID, err := uuid.Parse(sessionIDStr)
@@ -174,7 +231,17 @@ func (h *SessionHandler) LogoutSession(w http.ResponseWriter, r *http.Request) {
 }
 
 // GetSessionStatus obtém o status de uma sessão
-// GET /sessions/{sessionID}/status
+// @Summary      Status da Sessão
+// @Description  Obtém o status atual de uma sessão WhatsApp
+// @Tags         sessions
+// @Accept       json
+// @Produce      json
+// @Param        sessionID  path      string  true  "ID da sessão (UUID)"
+// @Success      200        {object}  responses.SuccessResponse  "Status da sessão"
+// @Failure      400        {object}  responses.ErrorResponse  "ID inválido"
+// @Failure      404        {object}  responses.ErrorResponse  "Sessão não encontrada"
+// @Failure      500        {object}  responses.ErrorResponse  "Erro interno"
+// @Router       /sessions/{sessionID}/status [get]
 func (h *SessionHandler) GetSessionStatus(w http.ResponseWriter, r *http.Request) {
 	sessionIDStr := chi.URLParam(r, "sessionID")
 	sessionID, err := uuid.Parse(sessionIDStr)
@@ -195,7 +262,17 @@ func (h *SessionHandler) GetSessionStatus(w http.ResponseWriter, r *http.Request
 }
 
 // GetQRCode obtém o QR code de uma sessão
-// GET /sessions/{sessionID}/qr
+// @Summary      QR Code da Sessão
+// @Description  Obtém o QR Code para autenticação da sessão WhatsApp
+// @Tags         sessions
+// @Accept       json
+// @Produce      json
+// @Param        sessionID  path      string  true  "ID da sessão (UUID)"
+// @Success      200        {object}  responses.SuccessResponse  "QR Code obtido"
+// @Failure      400        {object}  responses.ErrorResponse  "ID inválido"
+// @Failure      404        {object}  responses.ErrorResponse  "Sessão não encontrada"
+// @Failure      500        {object}  responses.ErrorResponse  "Erro interno"
+// @Router       /sessions/{sessionID}/qr [get]
 func (h *SessionHandler) GetQRCode(w http.ResponseWriter, r *http.Request) {
 	sessionIDStr := chi.URLParam(r, "sessionID")
 	sessionID, err := uuid.Parse(sessionIDStr)
@@ -215,12 +292,27 @@ func (h *SessionHandler) GetQRCode(w http.ResponseWriter, r *http.Request) {
 	if result.QRCode != "" {
 		responses.Success(w, "QR Code gerado e exibido no terminal do servidor", result)
 	} else {
-		responses.Success(w, "Nenhum QR Code disponível. Conecte a sessão primeiro para gerar um novo QR Code.", result)
+		if result.Status == "connected" {
+			responses.Success(w, "Sessão já está conectada. QR Code não é necessário.", result)
+		} else {
+			responses.Success(w, "Nenhum QR Code disponível. Conecte a sessão primeiro para gerar um novo QR Code.", result)
+		}
 	}
 }
 
 // PairPhone realiza pareamento por telefone
-// POST /sessions/{sessionID}/pairphone
+// @Summary      Pareamento por Telefone
+// @Description  Realiza pareamento da sessão WhatsApp usando número de telefone
+// @Tags         sessions
+// @Accept       json
+// @Produce      json
+// @Param        sessionID    path      string                           true   "ID da sessão (UUID)"
+// @Param request body object true   "Dados do pareamento"
+// @Success      200          {object}  responses.SuccessResponse  "Pareamento iniciado"
+// @Failure      400          {object}  responses.ErrorResponse          "Dados inválidos"
+// @Failure      404          {object}  responses.ErrorResponse          "Sessão não encontrada"
+// @Failure      500          {object}  responses.ErrorResponse          "Erro interno"
+// @Router       /sessions/{sessionID}/pairphone [post]
 func (h *SessionHandler) PairPhone(w http.ResponseWriter, r *http.Request) {
 	sessionIDStr := chi.URLParam(r, "sessionID")
 	sessionID, err := uuid.Parse(sessionIDStr)
@@ -250,7 +342,18 @@ func (h *SessionHandler) PairPhone(w http.ResponseWriter, r *http.Request) {
 }
 
 // SetProxy configura proxy para uma sessão
-// POST /sessions/{sessionID}/proxy/set
+// @Summary      Configurar Proxy
+// @Description  Configura proxy para uma sessão WhatsApp
+// @Tags         sessions
+// @Accept       json
+// @Produce      json
+// @Param        sessionID  path      string                    true  "ID da sessão (UUID)"
+// @Param request body object true  "Configurações do proxy"
+// @Success      200        {object}  responses.SuccessResponse  "Proxy configurado"
+// @Failure      400        {object}  responses.ErrorResponse   "Dados inválidos"
+// @Failure      404        {object}  responses.ErrorResponse   "Sessão não encontrada"
+// @Failure      500        {object}  responses.ErrorResponse   "Erro interno"
+// @Router       /sessions/{sessionID}/proxy/set [post]
 func (h *SessionHandler) SetProxy(w http.ResponseWriter, r *http.Request) {
 	sessionIDStr := chi.URLParam(r, "sessionID")
 	sessionID, err := uuid.Parse(sessionIDStr)
