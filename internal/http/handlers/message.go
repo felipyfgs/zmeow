@@ -68,15 +68,27 @@ func NewMessageHandler(
 
 // SendTextMessage envia uma mensagem de texto
 // @Summary Enviar mensagem de texto
-// @Description Envia uma mensagem de texto para um número específico através de uma sessão ativa
+// @Description Envia uma mensagem de texto para um número específico através de uma sessão ativa do WhatsApp
+// @Description
+// @Description **Exemplo de uso:**
+// @Description ```json
+// @Description {
+// @Description   "to": "559981769536",
+// @Description   "text": "Olá! Como você está?",
+// @Description   "contextInfo": {
+// @Description     "mentionedJids": ["559987654321@s.whatsapp.net"]
+// @Description   }
+// @Description }
+// @Description ```
 // @Tags Mensagens
 // @Accept json
 // @Produce json
-// @Param sessionID path string true "ID da sessão (UUID)"
-// @Param request body object true "Dados da mensagem de texto"
-// @Success 200 {object} responses.SuccessResponse "Mensagem enviada com sucesso"
-// @Failure 400 {object} responses.ErrorResponse "Dados inválidos"
-// @Failure 500 {object} responses.ErrorResponse "Erro interno do servidor"
+// @Param sessionID path string true "ID da sessão WhatsApp (UUID)" format(uuid) example("9a3a24d2-2b2c-4214-8797-7c6571837f53")
+// @Param request body message.SendTextMessageRequest true "Dados da mensagem de texto"
+// @Success 200 {object} responses.SuccessResponse{data=message.SendMessageResponse} "Mensagem enviada com sucesso"
+// @Failure 400 {object} responses.ErrorResponse "Parâmetros inválidos ou campos obrigatórios ausentes"
+// @Failure 404 {object} responses.ErrorResponse "Sessão não encontrada ou não conectada"
+// @Failure 500 {object} responses.ErrorResponse "Erro interno do servidor ou falha no envio"
 // @Router /messages/{sessionID}/send/text [post]
 func (h *MessageHandler) SendTextMessage(w http.ResponseWriter, r *http.Request) {
 	sessionIDStr := chi.URLParam(r, "sessionID")
@@ -106,15 +118,31 @@ func (h *MessageHandler) SendTextMessage(w http.ResponseWriter, r *http.Request)
 
 // SendMediaMessage envia mídia unificada (imagem, áudio, vídeo, documento)
 // @Summary Enviar mídia (imagem, áudio, vídeo, documento)
-// @Description Envia mídia para um número específico. Suporta três formatos: JSON com URL/Base64, form-data para upload direto
+// @Description Envia mídia para um número específico. Suporta JSON com URL/Base64 ou form-data para upload direto
+// @Description
+// @Description **Tipos de mídia suportados:**
+// @Description - `image`: Imagens (JPEG, PNG, WebP)
+// @Description - `audio`: Áudios (MP3, OGG, WAV)
+// @Description - `video`: Vídeos (MP4, AVI, MOV)
+// @Description - `document`: Documentos (PDF, DOC, TXT, etc.)
+// @Description
+// @Description **Duas formas de envio:**
+// @Description 1. JSON com Base64 ou URL
+// @Description 2. Form-data com upload de arquivo
 // @Tags Mensagens
 // @Accept json,multipart/form-data
 // @Produce json
-// @Param sessionID path string true "ID da sessão (UUID)"
-// @Param request body object true "Dados da mídia (JSON)" SchemaExample({"number": "5511999999999", "mediaType": "image", "media": "https://example.com/image.jpg", "caption": "Minha imagem"})
-// @Success 200 {object} responses.SuccessResponse "Mídia enviada com sucesso"
-// @Failure 400 {object} responses.ErrorResponse "Dados inválidos"
-// @Failure 500 {object} responses.ErrorResponse "Erro interno do servidor"
+// @Param sessionID path string true "ID da sessão WhatsApp (UUID)" format(uuid) example("9a3a24d2-2b2c-4214-8797-7c6571837f53")
+// @Param request body message.SendMediaMessageRequest true "Dados da mídia (para JSON)"
+// @Param to formData string false "Número do destinatário ou JID do grupo (obrigatório para form-data)" example("559981769536")
+// @Param mediaType formData string false "Tipo de mídia (obrigatório para form-data)" Enums(image, audio, video, document) example("image")
+// @Param media formData file false "Arquivo de mídia (obrigatório para form-data)"
+// @Param caption formData string false "Legenda da mídia (opcional para form-data)" example("Minha foto")
+// @Param fileName formData string false "Nome do arquivo (obrigatório para documentos)" example("documento.pdf")
+// @Success 200 {object} responses.SuccessResponse{data=message.SendMessageResponse} "Mídia enviada com sucesso"
+// @Failure 400 {object} responses.ErrorResponse "Parâmetros inválidos, tipo de mídia não suportado ou arquivo muito grande"
+// @Failure 404 {object} responses.ErrorResponse "Sessão não encontrada ou não conectada"
+// @Failure 500 {object} responses.ErrorResponse "Erro interno do servidor ou falha no envio"
 // @Router /messages/{sessionID}/send/media [post]
 func (h *MessageHandler) SendMediaMessage(w http.ResponseWriter, r *http.Request) {
 	sessionIDStr := chi.URLParam(r, "sessionID")
@@ -166,15 +194,19 @@ func (h *MessageHandler) SendMediaMessage(w http.ResponseWriter, r *http.Request
 
 // SendImageMessage envia uma imagem
 // @Summary Enviar imagem
-// @Description Envia uma imagem para um número específico
+// @Description Envia uma imagem para um número específico. Aceita URL pública ou dados Base64 no formato data:image/type;base64,data
+// @Description
+// @Description **Formatos suportados:** JPEG, PNG, WebP, GIF
+// @Description **Tamanho máximo:** 16MB
 // @Tags Mensagens
 // @Accept json
 // @Produce json
-// @Param sessionID path string true "ID da sessão (UUID)"
-// @Param request body object true "Dados da imagem"
-// @Success 200 {object} responses.SuccessResponse "Imagem enviada com sucesso"
-// @Failure 400 {object} responses.ErrorResponse "Dados inválidos"
-// @Failure 500 {object} responses.ErrorResponse "Erro interno do servidor"
+// @Param sessionID path string true "ID da sessão WhatsApp (UUID)" format(uuid) example("9a3a24d2-2b2c-4214-8797-7c6571837f53")
+// @Param request body message.SendImageMessageRequest true "Dados da imagem"
+// @Success 200 {object} responses.SuccessResponse{data=message.SendMessageResponse} "Imagem enviada com sucesso"
+// @Failure 400 {object} responses.ErrorResponse "Parâmetros inválidos, formato não suportado ou imagem muito grande"
+// @Failure 404 {object} responses.ErrorResponse "Sessão não encontrada ou não conectada"
+// @Failure 500 {object} responses.ErrorResponse "Erro interno do servidor ou falha no envio"
 // @Router /messages/{sessionID}/send/image [post]
 func (h *MessageHandler) SendImageMessage(w http.ResponseWriter, r *http.Request) {
 	sessionIDStr := chi.URLParam(r, "sessionID")
@@ -195,6 +227,7 @@ func (h *MessageHandler) SendImageMessage(w http.ResponseWriter, r *http.Request
 	// Converter para SendMediaMessageRequest
 	mediaReq := message.SendMediaMessageRequest{
 		Number:      req.Number,
+		GroupJid:    req.GroupJid,
 		MediaType:   "image",
 		Media:       req.Image,
 		Caption:     req.Caption,
@@ -215,15 +248,20 @@ func (h *MessageHandler) SendImageMessage(w http.ResponseWriter, r *http.Request
 
 // SendAudioMessage envia um áudio
 // @Summary Enviar áudio
-// @Description Envia um arquivo de áudio para um número específico
+// @Description Envia um arquivo de áudio para um número específico. Aceita URL pública ou dados Base64
+// @Description
+// @Description **Formatos suportados:** MP3, OGG, WAV, M4A
+// @Description **PTT (Push to Talk):** true = mensagem de voz, false = áudio normal
+// @Description **Tamanho máximo:** 16MB
 // @Tags Mensagens
 // @Accept json
 // @Produce json
-// @Param sessionID path string true "ID da sessão (UUID)"
-// @Param request body object true "Dados do áudio"
-// @Success 200 {object} responses.SuccessResponse "Áudio enviado com sucesso"
-// @Failure 400 {object} responses.ErrorResponse "Dados inválidos"
-// @Failure 500 {object} responses.ErrorResponse "Erro interno do servidor"
+// @Param sessionID path string true "ID da sessão WhatsApp (UUID)" format(uuid) example("9a3a24d2-2b2c-4214-8797-7c6571837f53")
+// @Param request body message.SendAudioMessageRequest true "Dados do áudio"
+// @Success 200 {object} responses.SuccessResponse{data=message.SendMessageResponse} "Áudio enviado com sucesso"
+// @Failure 400 {object} responses.ErrorResponse "Parâmetros inválidos, formato não suportado ou áudio muito grande"
+// @Failure 404 {object} responses.ErrorResponse "Sessão não encontrada ou não conectada"
+// @Failure 500 {object} responses.ErrorResponse "Erro interno do servidor ou falha no envio"
 // @Router /messages/{sessionID}/send/audio [post]
 func (h *MessageHandler) SendAudioMessage(w http.ResponseWriter, r *http.Request) {
 	sessionIDStr := chi.URLParam(r, "sessionID")
@@ -244,6 +282,7 @@ func (h *MessageHandler) SendAudioMessage(w http.ResponseWriter, r *http.Request
 	// Converter para SendMediaMessageRequest
 	mediaReq := message.SendMediaMessageRequest{
 		Number:      req.Number,
+		GroupJid:    req.GroupJid,
 		MediaType:   "audio",
 		Media:       req.Audio,
 		Caption:     req.Caption,
@@ -264,15 +303,19 @@ func (h *MessageHandler) SendAudioMessage(w http.ResponseWriter, r *http.Request
 
 // SendVideoMessage envia um vídeo
 // @Summary Enviar vídeo
-// @Description Envia um arquivo de vídeo para um número específico
+// @Description Envia um arquivo de vídeo para um número específico. Aceita URL pública ou dados Base64 no formato data:video/type;base64,data
+// @Description
+// @Description **Formatos suportados:** MP4, AVI, MOV, MKV
+// @Description **Tamanho máximo:** 64MB
 // @Tags Mensagens
 // @Accept json
 // @Produce json
-// @Param sessionID path string true "ID da sessão (UUID)"
-// @Param request body object true "Dados do vídeo"
-// @Success 200 {object} responses.SuccessResponse "Vídeo enviado com sucesso"
-// @Failure 400 {object} responses.ErrorResponse "Dados inválidos"
-// @Failure 500 {object} responses.ErrorResponse "Erro interno do servidor"
+// @Param sessionID path string true "ID da sessão WhatsApp (UUID)" format(uuid) example("9a3a24d2-2b2c-4214-8797-7c6571837f53")
+// @Param request body message.SendVideoMessageRequest true "Dados do vídeo"
+// @Success 200 {object} responses.SuccessResponse{data=message.SendMessageResponse} "Vídeo enviado com sucesso"
+// @Failure 400 {object} responses.ErrorResponse "Parâmetros inválidos, formato não suportado ou vídeo muito grande"
+// @Failure 404 {object} responses.ErrorResponse "Sessão não encontrada ou não conectada"
+// @Failure 500 {object} responses.ErrorResponse "Erro interno do servidor ou falha no envio"
 // @Router /messages/{sessionID}/send/video [post]
 func (h *MessageHandler) SendVideoMessage(w http.ResponseWriter, r *http.Request) {
 	sessionIDStr := chi.URLParam(r, "sessionID")
@@ -293,6 +336,7 @@ func (h *MessageHandler) SendVideoMessage(w http.ResponseWriter, r *http.Request
 	// Converter para SendMediaMessageRequest
 	mediaReq := message.SendMediaMessageRequest{
 		Number:      req.Number,
+		GroupJid:    req.GroupJid,
 		MediaType:   "video",
 		Media:       req.Video,
 		Caption:     req.Caption,
@@ -313,15 +357,20 @@ func (h *MessageHandler) SendVideoMessage(w http.ResponseWriter, r *http.Request
 
 // SendDocumentMessage envia um documento
 // @Summary Enviar documento
-// @Description Envia um arquivo de documento para um número específico
+// @Description Envia um arquivo de documento para um número específico. Aceita URL pública ou dados Base64. O campo fileName é obrigatório
+// @Description
+// @Description **Formatos suportados:** PDF, DOC, DOCX, XLS, XLSX, TXT, etc.
+// @Description **Tamanho máximo:** 100MB
+// @Description **Campos obrigatórios:** number, document, fileName
 // @Tags Mensagens
 // @Accept json
 // @Produce json
-// @Param sessionID path string true "ID da sessão (UUID)"
-// @Param request body object true "Dados do documento"
-// @Success 200 {object} responses.SuccessResponse "Documento enviado com sucesso"
-// @Failure 400 {object} responses.ErrorResponse "Dados inválidos"
-// @Failure 500 {object} responses.ErrorResponse "Erro interno do servidor"
+// @Param sessionID path string true "ID da sessão WhatsApp (UUID)" format(uuid) example("9a3a24d2-2b2c-4214-8797-7c6571837f53")
+// @Param request body message.SendDocumentMessageRequest true "Dados do documento"
+// @Success 200 {object} responses.SuccessResponse{data=message.SendMessageResponse} "Documento enviado com sucesso"
+// @Failure 400 {object} responses.ErrorResponse "Parâmetros inválidos, fileName ausente ou documento muito grande"
+// @Failure 404 {object} responses.ErrorResponse "Sessão não encontrada ou não conectada"
+// @Failure 500 {object} responses.ErrorResponse "Erro interno do servidor ou falha no envio"
 // @Router /messages/{sessionID}/send/document [post]
 func (h *MessageHandler) SendDocumentMessage(w http.ResponseWriter, r *http.Request) {
 	sessionIDStr := chi.URLParam(r, "sessionID")
@@ -342,6 +391,7 @@ func (h *MessageHandler) SendDocumentMessage(w http.ResponseWriter, r *http.Requ
 	// Converter para SendMediaMessageRequest
 	mediaReq := message.SendMediaMessageRequest{
 		Number:      req.Number,
+		GroupJid:    req.GroupJid,
 		MediaType:   "document",
 		Media:       req.Document,
 		Caption:     req.Caption,
@@ -363,15 +413,20 @@ func (h *MessageHandler) SendDocumentMessage(w http.ResponseWriter, r *http.Requ
 
 // SendLocationMessage envia uma localização
 // @Summary Enviar localização
-// @Description Envia uma localização (latitude e longitude) para um número específico
+// @Description Envia coordenadas de localização (latitude e longitude) para um número específico
+// @Description
+// @Description **Campos obrigatórios:** number, latitude, longitude
+// @Description **Campos opcionais:** name (nome do local), address (endereço)
+// @Description **Formato das coordenadas:** Decimais (ex: -23.550520, -46.633309)
 // @Tags Mensagens
 // @Accept json
 // @Produce json
-// @Param sessionID path string true "ID da sessão (UUID)"
-// @Param request body object true "Dados da localização"
-// @Success 200 {object} responses.SuccessResponse "Localização enviada com sucesso"
-// @Failure 400 {object} responses.ErrorResponse "Dados inválidos"
-// @Failure 500 {object} responses.ErrorResponse "Erro interno do servidor"
+// @Param sessionID path string true "ID da sessão WhatsApp (UUID)" format(uuid) example("9a3a24d2-2b2c-4214-8797-7c6571837f53")
+// @Param request body message.SendLocationMessageRequest true "Dados da localização"
+// @Success 200 {object} responses.SuccessResponse{data=message.SendMessageResponse} "Localização enviada com sucesso"
+// @Failure 400 {object} responses.ErrorResponse "Parâmetros inválidos ou coordenadas fora do intervalo válido"
+// @Failure 404 {object} responses.ErrorResponse "Sessão não encontrada ou não conectada"
+// @Failure 500 {object} responses.ErrorResponse "Erro interno do servidor ou falha no envio"
 // @Router /messages/{sessionID}/send/location [post]
 func (h *MessageHandler) SendLocationMessage(w http.ResponseWriter, r *http.Request) {
 	sessionIDStr := chi.URLParam(r, "sessionID")
@@ -401,15 +456,19 @@ func (h *MessageHandler) SendLocationMessage(w http.ResponseWriter, r *http.Requ
 
 // SendContactMessage envia um contato
 // @Summary Enviar contato
-// @Description Envia informações de contato para um número específico
+// @Description Envia informações de contato para um número específico. Permite compartilhar dados de contato do WhatsApp
+// @Description
+// @Description **Campos obrigatórios:** number, contactName, contactJID
+// @Description **Formato do contactJID:** número@s.whatsapp.net (ex: 559987654321@s.whatsapp.net)
 // @Tags Mensagens
 // @Accept json
 // @Produce json
-// @Param sessionID path string true "ID da sessão (UUID)"
-// @Param request body object true "Dados do contato"
-// @Success 200 {object} responses.SuccessResponse "Contato enviado com sucesso"
-// @Failure 400 {object} responses.ErrorResponse "Dados inválidos"
-// @Failure 500 {object} responses.ErrorResponse "Erro interno do servidor"
+// @Param sessionID path string true "ID da sessão WhatsApp (UUID)" format(uuid) example("9a3a24d2-2b2c-4214-8797-7c6571837f53")
+// @Param request body message.SendContactMessageRequest true "Dados do contato"
+// @Success 200 {object} responses.SuccessResponse{data=message.SendMessageResponse} "Contato enviado com sucesso"
+// @Failure 400 {object} responses.ErrorResponse "Parâmetros inválidos ou formato de JID incorreto"
+// @Failure 404 {object} responses.ErrorResponse "Sessão não encontrada ou não conectada"
+// @Failure 500 {object} responses.ErrorResponse "Erro interno do servidor ou falha no envio"
 // @Router /messages/{sessionID}/send/contact [post]
 func (h *MessageHandler) SendContactMessage(w http.ResponseWriter, r *http.Request) {
 	sessionIDStr := chi.URLParam(r, "sessionID")
@@ -439,15 +498,20 @@ func (h *MessageHandler) SendContactMessage(w http.ResponseWriter, r *http.Reque
 
 // SendStickerMessage envia um sticker
 // @Summary Enviar sticker
-// @Description Envia um sticker para um número específico
+// @Description Envia um sticker para um número específico. Aceita URL pública ou dados Base64 preferencialmente no formato WebP
+// @Description
+// @Description **Formato recomendado:** WebP (data:image/webp;base64,data)
+// @Description **Outros formatos aceitos:** PNG, JPEG
+// @Description **Tamanho máximo:** 1MB
 // @Tags Mensagens
 // @Accept json
 // @Produce json
-// @Param sessionID path string true "ID da sessão (UUID)"
-// @Param request body object true "Dados do sticker"
-// @Success 200 {object} responses.SuccessResponse "Sticker enviado com sucesso"
-// @Failure 400 {object} responses.ErrorResponse "Dados inválidos"
-// @Failure 500 {object} responses.ErrorResponse "Erro interno do servidor"
+// @Param sessionID path string true "ID da sessão WhatsApp (UUID)" format(uuid) example("9a3a24d2-2b2c-4214-8797-7c6571837f53")
+// @Param request body message.SendStickerMessageRequest true "Dados do sticker"
+// @Success 200 {object} responses.SuccessResponse{data=message.SendMessageResponse} "Sticker enviado com sucesso"
+// @Failure 400 {object} responses.ErrorResponse "Parâmetros inválidos, formato não suportado ou sticker muito grande"
+// @Failure 404 {object} responses.ErrorResponse "Sessão não encontrada ou não conectada"
+// @Failure 500 {object} responses.ErrorResponse "Erro interno do servidor ou falha no envio"
 // @Router /messages/{sessionID}/send/sticker [post]
 func (h *MessageHandler) SendStickerMessage(w http.ResponseWriter, r *http.Request) {
 	sessionIDStr := chi.URLParam(r, "sessionID")
@@ -477,15 +541,20 @@ func (h *MessageHandler) SendStickerMessage(w http.ResponseWriter, r *http.Reque
 
 // SendButtonsMessage envia mensagem com botões
 // @Summary Enviar mensagem com botões
-// @Description Envia uma mensagem interativa com botões para um número específico
+// @Description Envia uma mensagem interativa com botões para um número específico. Ideal para opções rápidas
+// @Description
+// @Description **Limites:** Mínimo 1, máximo 3 botões por mensagem
+// @Description **Campos obrigatórios:** number, text, buttons
+// @Description **Cada botão precisa:** id (único), displayText
 // @Tags Mensagens
 // @Accept json
 // @Produce json
-// @Param sessionID path string true "ID da sessão (UUID)"
-// @Param request body object true "Dados da mensagem com botões"
-// @Success 200 {object} responses.SuccessResponse "Mensagem com botões enviada com sucesso"
-// @Failure 400 {object} responses.ErrorResponse "Dados inválidos"
-// @Failure 500 {object} responses.ErrorResponse "Erro interno do servidor"
+// @Param sessionID path string true "ID da sessão WhatsApp (UUID)" format(uuid) example("9a3a24d2-2b2c-4214-8797-7c6571837f53")
+// @Param request body message.SendButtonsMessageRequest true "Dados da mensagem com botões"
+// @Success 200 {object} responses.SuccessResponse{data=message.SendMessageResponse} "Mensagem com botões enviada com sucesso"
+// @Failure 400 {object} responses.ErrorResponse "Parâmetros inválidos, muitos botões ou IDs duplicados"
+// @Failure 404 {object} responses.ErrorResponse "Sessão não encontrada ou não conectada"
+// @Failure 500 {object} responses.ErrorResponse "Erro interno do servidor ou falha no envio"
 // @Router /messages/{sessionID}/send/buttons [post]
 func (h *MessageHandler) SendButtonsMessage(w http.ResponseWriter, r *http.Request) {
 	sessionIDStr := chi.URLParam(r, "sessionID")
@@ -515,15 +584,21 @@ func (h *MessageHandler) SendButtonsMessage(w http.ResponseWriter, r *http.Reque
 
 // SendListMessage envia mensagem com lista
 // @Summary Enviar mensagem com lista
-// @Description Envia uma mensagem interativa com lista de opções para um número específico
+// @Description Envia uma mensagem interativa com lista de opções organizadas em seções. Ideal para muitas opções
+// @Description
+// @Description **Estrutura:** Seções -> Linhas (itens)
+// @Description **Campos obrigatórios:** number, text, title, buttonText, sections
+// @Description **Cada seção precisa:** title, rows (mínimo 1)
+// @Description **Cada linha precisa:** id (único), title
 // @Tags Mensagens
 // @Accept json
 // @Produce json
-// @Param sessionID path string true "ID da sessão (UUID)"
-// @Param request body object true "Dados da mensagem com lista"
-// @Success 200 {object} responses.SuccessResponse "Mensagem com lista enviada com sucesso"
-// @Failure 400 {object} responses.ErrorResponse "Dados inválidos"
-// @Failure 500 {object} responses.ErrorResponse "Erro interno do servidor"
+// @Param sessionID path string true "ID da sessão WhatsApp (UUID)" format(uuid) example("9a3a24d2-2b2c-4214-8797-7c6571837f53")
+// @Param request body message.SendListMessageRequest true "Dados da mensagem com lista"
+// @Success 200 {object} responses.SuccessResponse{data=message.SendMessageResponse} "Mensagem com lista enviada com sucesso"
+// @Failure 400 {object} responses.ErrorResponse "Parâmetros inválidos, seções vazias ou IDs duplicados"
+// @Failure 404 {object} responses.ErrorResponse "Sessão não encontrada ou não conectada"
+// @Failure 500 {object} responses.ErrorResponse "Erro interno do servidor ou falha no envio"
 // @Router /messages/{sessionID}/send/list [post]
 func (h *MessageHandler) SendListMessage(w http.ResponseWriter, r *http.Request) {
 	sessionIDStr := chi.URLParam(r, "sessionID")
@@ -553,15 +628,20 @@ func (h *MessageHandler) SendListMessage(w http.ResponseWriter, r *http.Request)
 
 // SendPollMessage envia enquete
 // @Summary Enviar enquete
-// @Description Envia uma enquete com opções de resposta para um número específico
+// @Description Envia uma enquete (poll) com opções de resposta para um número específico
+// @Description
+// @Description **Limites:** Mínimo 2, máximo 12 opções por enquete
+// @Description **Campos obrigatórios:** number, name (pergunta), options, selectableOptionsCount
+// @Description **selectableOptionsCount:** quantas opções o usuário pode escolher (1 = múltipla escolha, >1 = seleção múltipla)
 // @Tags Mensagens
 // @Accept json
 // @Produce json
-// @Param sessionID path string true "ID da sessão (UUID)"
-// @Param request body object true "Dados da enquete"
-// @Success 200 {object} responses.SuccessResponse "Enquete enviada com sucesso"
-// @Failure 400 {object} responses.ErrorResponse "Dados inválidos"
-// @Failure 500 {object} responses.ErrorResponse "Erro interno do servidor"
+// @Param sessionID path string true "ID da sessão WhatsApp (UUID)" format(uuid) example("9a3a24d2-2b2c-4214-8797-7c6571837f53")
+// @Param request body message.SendPollMessageRequest true "Dados da enquete"
+// @Success 200 {object} responses.SuccessResponse{data=message.SendMessageResponse} "Enquete enviada com sucesso"
+// @Failure 400 {object} responses.ErrorResponse "Parâmetros inválidos, poucas/muitas opções ou selectableOptionsCount inválido"
+// @Failure 404 {object} responses.ErrorResponse "Sessão não encontrada ou não conectada"
+// @Failure 500 {object} responses.ErrorResponse "Erro interno do servidor ou falha no envio"
 // @Router /messages/{sessionID}/send/poll [post]
 func (h *MessageHandler) SendPollMessage(w http.ResponseWriter, r *http.Request) {
 	sessionIDStr := chi.URLParam(r, "sessionID")
@@ -591,16 +671,21 @@ func (h *MessageHandler) SendPollMessage(w http.ResponseWriter, r *http.Request)
 
 // EditMessage edita mensagem existente
 // @Summary Editar mensagem
-// @Description Edita o conteúdo de uma mensagem já enviada
+// @Description Edita o conteúdo de uma mensagem já enviada. Funciona apenas para mensagens de texto
+// @Description
+// @Description **Limitações:** Apenas mensagens de texto podem ser editadas
+// @Description **Tempo limite:** Mensagens podem ser editadas dentro de 15 minutos após o envio
+// @Description **Campos obrigatórios:** number, id (da mensagem), newText
 // @Tags Mensagens
 // @Accept json
 // @Produce json
-// @Param sessionID path string true "ID da sessão (UUID)"
-// @Param request body object true "Dados para edição da mensagem"
-// @Success 200 {object} responses.SuccessResponse "Mensagem editada com sucesso"
-// @Failure 400 {object} responses.ErrorResponse "Dados inválidos"
-// @Failure 500 {object} responses.ErrorResponse "Erro interno do servidor"
-// @Router /messages/{sessionID}/send/edit [post]
+// @Param sessionID path string true "ID da sessão WhatsApp (UUID)" format(uuid) example("9a3a24d2-2b2c-4214-8797-7c6571837f53")
+// @Param request body message.EditMessageRequest true "Dados para edição da mensagem"
+// @Success 200 {object} responses.SuccessResponse{data=message.SendMessageResponse} "Mensagem editada com sucesso"
+// @Failure 400 {object} responses.ErrorResponse "Parâmetros inválidos, mensagem não editável ou tempo limite excedido"
+// @Failure 404 {object} responses.ErrorResponse "Sessão não encontrada ou mensagem não encontrada"
+// @Failure 500 {object} responses.ErrorResponse "Erro interno do servidor ou falha na edição"
+// @Router /messages/{sessionID}/edit [post]
 func (h *MessageHandler) EditMessage(w http.ResponseWriter, r *http.Request) {
 	sessionIDStr := chi.URLParam(r, "sessionID")
 	sessionID, err := uuid.Parse(sessionIDStr)
@@ -629,15 +714,21 @@ func (h *MessageHandler) EditMessage(w http.ResponseWriter, r *http.Request) {
 
 // DeleteMessage deleta uma mensagem
 // @Summary Deletar mensagem
-// @Description Deleta uma mensagem específica do chat
+// @Description Deleta uma mensagem específica do chat com opção de deletar para todos ou apenas para você
+// @Description
+// @Description **Tipos de deleção:**
+// @Description - forMe=true: Deleta apenas para você
+// @Description - forMe=false: Deleta para todos (padrão)
+// @Description **Tempo limite:** Mensagens podem ser deletadas para todos dentro de 7 minutos
 // @Tags Mensagens
 // @Accept json
 // @Produce json
-// @Param sessionID path string true "ID da sessão (UUID)"
-// @Param request body object true "Dados para deletar a mensagem"
-// @Success 200 {object} responses.SuccessResponse "Mensagem deletada com sucesso"
-// @Failure 400 {object} responses.ErrorResponse "Dados inválidos"
-// @Failure 500 {object} responses.ErrorResponse "Erro interno do servidor"
+// @Param sessionID path string true "ID da sessão WhatsApp (UUID)" format(uuid) example("9a3a24d2-2b2c-4214-8797-7c6571837f53")
+// @Param request body message.DeleteMessageRequest true "Dados para deletar a mensagem"
+// @Success 200 {object} responses.SuccessResponse{data=message.SendMessageResponse} "Mensagem deletada com sucesso"
+// @Failure 400 {object} responses.ErrorResponse "Parâmetros inválidos ou tempo limite excedido para deletar para todos"
+// @Failure 404 {object} responses.ErrorResponse "Sessão não encontrada ou mensagem não encontrada"
+// @Failure 500 {object} responses.ErrorResponse "Erro interno do servidor ou falha na deleção"
 // @Router /messages/{sessionID}/delete [post]
 func (h *MessageHandler) DeleteMessage(w http.ResponseWriter, r *http.Request) {
 	sessionIDStr := chi.URLParam(r, "sessionID")
@@ -667,15 +758,21 @@ func (h *MessageHandler) DeleteMessage(w http.ResponseWriter, r *http.Request) {
 
 // ReactMessage reage a uma mensagem
 // @Summary Reagir a mensagem
-// @Description Adiciona uma reação (emoji) a uma mensagem específica
+// @Description Adiciona ou remove uma reação (emoji) a uma mensagem específica
+// @Description
+// @Description **Adição de reação:** Informe o emoji no campo reaction
+// @Description **Remoção de reação:** Use string vazia ("") no campo reaction
+// @Description **Emojis suportados:** 👍, ❤️, 😂, 😮, 😢, 😡, etc.
+// @Description **Prefixo \"me:\":** Use para reagir às suas próprias mensagens
 // @Tags Mensagens
 // @Accept json
 // @Produce json
-// @Param sessionID path string true "ID da sessão (UUID)"
-// @Param request body object true "Dados da reação"
-// @Success 200 {object} responses.SuccessResponse "Reação enviada com sucesso"
-// @Failure 400 {object} responses.ErrorResponse "Dados inválidos"
-// @Failure 500 {object} responses.ErrorResponse "Erro interno do servidor"
+// @Param sessionID path string true "ID da sessão WhatsApp (UUID)" format(uuid) example("9a3a24d2-2b2c-4214-8797-7c6571837f53")
+// @Param request body message.ReactMessageRequest true "Dados da reação"
+// @Success 200 {object} responses.SuccessResponse{data=message.SendMessageResponse} "Reação enviada com sucesso"
+// @Failure 400 {object} responses.ErrorResponse "Parâmetros inválidos ou emoji não suportado"
+// @Failure 404 {object} responses.ErrorResponse "Sessão não encontrada ou mensagem não encontrada"
+// @Failure 500 {object} responses.ErrorResponse "Erro interno do servidor ou falha na reação"
 // @Router /messages/{sessionID}/react [post]
 func (h *MessageHandler) ReactMessage(w http.ResponseWriter, r *http.Request) {
 	sessionIDStr := chi.URLParam(r, "sessionID")
@@ -715,6 +812,7 @@ func (h *MessageHandler) parseFormDataMedia(r *http.Request) (message.SendMediaM
 
 	// Campos obrigatórios
 	req.Number = r.FormValue("number")
+	req.GroupJid = r.FormValue("groupJid")
 	req.MediaType = r.FormValue("mediaType")
 
 	// Campos opcionais
@@ -758,9 +856,13 @@ func (h *MessageHandler) parseFormDataMedia(r *http.Request) (message.SendMediaM
 
 // validateAndProcessMedia valida e processa os dados de mídia
 func (h *MessageHandler) validateAndProcessMedia(req *message.SendMediaMessageRequest) error {
-	// Validar campos obrigatórios
-	if req.Number == "" {
-		return fmt.Errorf("number is required")
+	// Validar campos obrigatórios - pelo menos um deve estar preenchido
+	if req.Number == "" && req.GroupJid == "" {
+		return fmt.Errorf("either number or groupJid must be provided")
+	}
+
+	if req.Number != "" && req.GroupJid != "" {
+		return fmt.Errorf("only one of number or groupJid should be provided")
 	}
 
 	if req.MediaType == "" {

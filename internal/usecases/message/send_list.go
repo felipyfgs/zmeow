@@ -38,7 +38,7 @@ func NewSendListMessageUseCase(
 func (uc *SendListMessageUseCase) Execute(ctx context.Context, sessionID uuid.UUID, req message.SendListMessageRequest) (*message.SendMessageResponse, error) {
 	uc.logger.WithFields(map[string]interface{}{
 		"sessionId":    sessionID,
-		"phone":        req.Number,
+		"to":           req.To,
 		"text":         req.Text,
 		"footer":       req.Footer,
 		"title":        req.Title,
@@ -66,7 +66,7 @@ func (uc *SendListMessageUseCase) Execute(ctx context.Context, sessionID uuid.UU
 	}
 
 	// Normalizar número de telefone
-	normalizedPhone := uc.normalizePhoneNumber(req.Number)
+	normalizedPhone := uc.normalizePhoneNumber(req.To)
 
 	// Obter cliente WhatsApp
 	client, err := uc.whatsappManager.GetClient(sessionID)
@@ -84,7 +84,7 @@ func (uc *SendListMessageUseCase) Execute(ctx context.Context, sessionID uuid.UU
 
 	uc.logger.WithFields(map[string]interface{}{
 		"sessionId": sessionID,
-		"phone":     normalizedPhone,
+		"to":        normalizedPhone,
 		"messageId": messageID,
 	}).Info().Msg("List message sent successfully")
 
@@ -96,10 +96,10 @@ func (uc *SendListMessageUseCase) Execute(ctx context.Context, sessionID uuid.UU
 
 	// Criar resposta
 	response := &message.SendMessageResponse{
-		ID: messageID,
-		Status:    "sent",
+		ID:     messageID,
+		Status: "sent",
 		Details: map[string]interface{}{
-			"phone":        normalizedPhone,
+			"to":           normalizedPhone,
 			"sessionId":    sessionID,
 			"type":         "list",
 			"sectionCount": len(req.Sections),
@@ -112,8 +112,8 @@ func (uc *SendListMessageUseCase) Execute(ctx context.Context, sessionID uuid.UU
 
 // validateRequest valida a requisição de envio de mensagem com lista
 func (uc *SendListMessageUseCase) validateRequest(req message.SendListMessageRequest) error {
-	if req.Number == "" {
-		return fmt.Errorf("phone number is required")
+	if req.To == "" {
+		return fmt.Errorf("to is required")
 	}
 
 	if req.Text == "" {
@@ -203,7 +203,7 @@ func (uc *SendListMessageUseCase) validateRequest(req message.SendListMessageReq
 	}
 
 	// Validar formato do telefone
-	if !uc.isValidPhoneNumber(req.Number) {
+	if !uc.isValidPhoneNumber(req.To) {
 		return fmt.Errorf("invalid phone number format")
 	}
 

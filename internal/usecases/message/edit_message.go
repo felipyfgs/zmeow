@@ -38,7 +38,7 @@ func NewEditMessageUseCase(
 func (uc *EditMessageUseCase) Execute(ctx context.Context, sessionID uuid.UUID, req message.EditMessageRequest) (*message.SendMessageResponse, error) {
 	uc.logger.WithFields(map[string]interface{}{
 		"sessionId": sessionID,
-		"phone":     req.Number,
+		"to":        req.To,
 		"messageId": req.ID,
 		"newText":   req.NewText,
 	}).Info().Msg("Editing message")
@@ -63,7 +63,7 @@ func (uc *EditMessageUseCase) Execute(ctx context.Context, sessionID uuid.UUID, 
 	}
 
 	// Normalizar número de telefone
-	normalizedPhone := uc.normalizePhoneNumber(req.Number)
+	normalizedPhone := uc.normalizePhoneNumber(req.To)
 
 	// Obter cliente WhatsApp
 	client, err := uc.whatsappManager.GetClient(sessionID)
@@ -80,10 +80,10 @@ func (uc *EditMessageUseCase) Execute(ctx context.Context, sessionID uuid.UUID, 
 	}
 
 	uc.logger.WithFields(map[string]interface{}{
-		"sessionId":       sessionID,
-		"phone":           normalizedPhone,
-		"originalId":      req.ID,
-		"editedId":        editedMessageID,
+		"sessionId":  sessionID,
+		"to":         normalizedPhone,
+		"originalId": req.ID,
+		"editedId":   editedMessageID,
 	}).Info().Msg("Message edited successfully")
 
 	// Criar resposta
@@ -91,7 +91,7 @@ func (uc *EditMessageUseCase) Execute(ctx context.Context, sessionID uuid.UUID, 
 		ID:     editedMessageID,
 		Status: "edited",
 		Details: map[string]interface{}{
-			"phone":      normalizedPhone,
+			"to":         normalizedPhone,
 			"sessionId":  sessionID,
 			"type":       "edit",
 			"originalId": req.ID,
@@ -103,8 +103,8 @@ func (uc *EditMessageUseCase) Execute(ctx context.Context, sessionID uuid.UUID, 
 
 // validateRequest valida a requisição de edição de mensagem
 func (uc *EditMessageUseCase) validateRequest(req message.EditMessageRequest) error {
-	if req.Number == "" {
-		return fmt.Errorf("phone number is required")
+	if req.To == "" {
+		return fmt.Errorf("to is required")
 	}
 
 	if req.ID == "" {
@@ -125,7 +125,7 @@ func (uc *EditMessageUseCase) validateRequest(req message.EditMessageRequest) er
 	}
 
 	// Validar formato do telefone
-	if !uc.isValidPhoneNumber(req.Number) {
+	if !uc.isValidPhoneNumber(req.To) {
 		return fmt.Errorf("invalid phone number format")
 	}
 

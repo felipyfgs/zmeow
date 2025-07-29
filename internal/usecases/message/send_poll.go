@@ -38,7 +38,7 @@ func NewSendPollMessageUseCase(
 func (uc *SendPollMessageUseCase) Execute(ctx context.Context, sessionID uuid.UUID, req message.SendPollMessageRequest) (*message.SendMessageResponse, error) {
 	uc.logger.WithFields(map[string]interface{}{
 		"sessionId":       sessionID,
-		"phone":           req.Number,
+		"to":              req.To,
 		"name":            req.Name,
 		"optionCount":     len(req.Options),
 		"selectableCount": req.SelectableOptionsCount,
@@ -64,7 +64,7 @@ func (uc *SendPollMessageUseCase) Execute(ctx context.Context, sessionID uuid.UU
 	}
 
 	// Normalizar número de telefone
-	normalizedPhone := uc.normalizePhoneNumber(req.Number)
+	normalizedPhone := uc.normalizePhoneNumber(req.To)
 
 	// Obter cliente WhatsApp
 	client, err := uc.whatsappManager.GetClient(sessionID)
@@ -82,7 +82,7 @@ func (uc *SendPollMessageUseCase) Execute(ctx context.Context, sessionID uuid.UU
 
 	uc.logger.WithFields(map[string]interface{}{
 		"sessionId": sessionID,
-		"phone":     normalizedPhone,
+		"to":        normalizedPhone,
 		"messageId": messageID,
 	}).Info().Msg("Poll message sent successfully")
 
@@ -91,7 +91,7 @@ func (uc *SendPollMessageUseCase) Execute(ctx context.Context, sessionID uuid.UU
 		ID:     messageID,
 		Status: "sent",
 		Details: map[string]interface{}{
-			"phone":           normalizedPhone,
+			"to":              normalizedPhone,
 			"sessionId":       sessionID,
 			"type":            "poll",
 			"optionCount":     len(req.Options),
@@ -104,8 +104,8 @@ func (uc *SendPollMessageUseCase) Execute(ctx context.Context, sessionID uuid.UU
 
 // validateRequest valida a requisição de envio de enquete
 func (uc *SendPollMessageUseCase) validateRequest(req message.SendPollMessageRequest) error {
-	if req.Number == "" {
-		return fmt.Errorf("phone number is required")
+	if req.To == "" {
+		return fmt.Errorf("to is required")
 	}
 
 	if req.Name == "" {
@@ -153,7 +153,7 @@ func (uc *SendPollMessageUseCase) validateRequest(req message.SendPollMessageReq
 	}
 
 	// Validar formato do telefone ou JID de grupo
-	if !uc.isValidPhoneNumberOrGroupJID(req.Number) {
+	if !uc.isValidPhoneNumberOrGroupJID(req.To) {
 		return fmt.Errorf("invalid phone number or group JID format")
 	}
 

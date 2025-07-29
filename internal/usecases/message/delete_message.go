@@ -38,7 +38,7 @@ func NewDeleteMessageUseCase(
 func (uc *DeleteMessageUseCase) Execute(ctx context.Context, sessionID uuid.UUID, req message.DeleteMessageRequest) (*message.SendMessageResponse, error) {
 	uc.logger.WithFields(map[string]interface{}{
 		"sessionId": sessionID,
-		"number":    req.Number,
+		"to":        req.To,
 		"messageId": req.ID,
 		"forMe":     req.ForMe,
 	}).Info().Msg("Deleting message")
@@ -63,7 +63,7 @@ func (uc *DeleteMessageUseCase) Execute(ctx context.Context, sessionID uuid.UUID
 	}
 
 	// Normalizar número de telefone
-	normalizedPhone := uc.normalizePhoneNumber(req.Number)
+	normalizedPhone := uc.normalizePhoneNumber(req.To)
 
 	// Obter cliente WhatsApp
 	client, err := uc.whatsappManager.GetClient(sessionID)
@@ -91,7 +91,7 @@ func (uc *DeleteMessageUseCase) Execute(ctx context.Context, sessionID uuid.UUID
 		ID:     req.ID,
 		Status: "deleted",
 		Details: map[string]interface{}{
-			"number":    normalizedPhone,
+			"to":        normalizedPhone,
 			"sessionId": sessionID,
 			"type":      "delete",
 			"forMe":     req.ForMe,
@@ -103,8 +103,8 @@ func (uc *DeleteMessageUseCase) Execute(ctx context.Context, sessionID uuid.UUID
 
 // validateRequest valida a requisição de deletar mensagem
 func (uc *DeleteMessageUseCase) validateRequest(req message.DeleteMessageRequest) error {
-	if req.Number == "" {
-		return fmt.Errorf("phone number is required")
+	if req.To == "" {
+		return fmt.Errorf("to is required")
 	}
 
 	if req.ID == "" {
@@ -112,7 +112,7 @@ func (uc *DeleteMessageUseCase) validateRequest(req message.DeleteMessageRequest
 	}
 
 	// Validar formato do telefone
-	if !uc.isValidPhoneNumber(req.Number) {
+	if !uc.isValidPhoneNumber(req.To) {
 		return fmt.Errorf("invalid phone number format")
 	}
 

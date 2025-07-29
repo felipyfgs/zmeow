@@ -38,7 +38,7 @@ func NewReactMessageUseCase(
 func (uc *ReactMessageUseCase) Execute(ctx context.Context, sessionID uuid.UUID, req message.ReactMessageRequest) (*message.SendMessageResponse, error) {
 	uc.logger.WithFields(map[string]interface{}{
 		"sessionId": sessionID,
-		"number":    req.Number,
+		"to":        req.To,
 		"messageId": req.ID,
 		"reaction":  req.Reaction,
 	}).Info().Msg("Reacting to message")
@@ -63,7 +63,7 @@ func (uc *ReactMessageUseCase) Execute(ctx context.Context, sessionID uuid.UUID,
 	}
 
 	// Normalizar número de telefone
-	normalizedPhone := uc.normalizePhoneNumber(req.Number)
+	normalizedPhone := uc.normalizePhoneNumber(req.To)
 
 	// Obter cliente WhatsApp
 	client, err := uc.whatsappManager.GetClient(sessionID)
@@ -81,7 +81,7 @@ func (uc *ReactMessageUseCase) Execute(ctx context.Context, sessionID uuid.UUID,
 
 	uc.logger.WithFields(map[string]interface{}{
 		"sessionId": sessionID,
-		"number":    normalizedPhone,
+		"to":        normalizedPhone,
 		"messageId": req.ID,
 		"reaction":  req.Reaction,
 	}).Info().Msg("Reaction sent successfully")
@@ -91,7 +91,7 @@ func (uc *ReactMessageUseCase) Execute(ctx context.Context, sessionID uuid.UUID,
 		ID:     req.ID,
 		Status: "reacted",
 		Details: map[string]interface{}{
-			"number":    normalizedPhone,
+			"to":        normalizedPhone,
 			"sessionId": sessionID,
 			"type":      "reaction",
 			"reaction":  req.Reaction,
@@ -103,8 +103,8 @@ func (uc *ReactMessageUseCase) Execute(ctx context.Context, sessionID uuid.UUID,
 
 // validateRequest valida a requisição de reagir a mensagem
 func (uc *ReactMessageUseCase) validateRequest(req message.ReactMessageRequest) error {
-	if req.Number == "" {
-		return fmt.Errorf("phone number is required")
+	if req.To == "" {
+		return fmt.Errorf("to is required")
 	}
 
 	if req.ID == "" {
@@ -112,7 +112,7 @@ func (uc *ReactMessageUseCase) validateRequest(req message.ReactMessageRequest) 
 	}
 
 	// Validar formato do telefone
-	if !uc.isValidPhoneNumber(req.Number) {
+	if !uc.isValidPhoneNumber(req.To) {
 		return fmt.Errorf("invalid phone number format")
 	}
 

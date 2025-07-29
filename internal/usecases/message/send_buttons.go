@@ -38,7 +38,7 @@ func NewSendButtonsMessageUseCase(
 func (uc *SendButtonsMessageUseCase) Execute(ctx context.Context, sessionID uuid.UUID, req message.SendButtonsMessageRequest) (*message.SendMessageResponse, error) {
 	uc.logger.WithFields(map[string]interface{}{
 		"sessionId":   sessionID,
-		"phone":       req.Number,
+		"to":          req.To,
 		"text":        req.Text,
 		"footer":      req.Footer,
 		"buttonCount": len(req.Buttons),
@@ -64,7 +64,7 @@ func (uc *SendButtonsMessageUseCase) Execute(ctx context.Context, sessionID uuid
 	}
 
 	// Normalizar número de telefone
-	normalizedPhone := uc.normalizePhoneNumber(req.Number)
+	normalizedPhone := uc.normalizePhoneNumber(req.To)
 
 	// Obter cliente WhatsApp
 	client, err := uc.whatsappManager.GetClient(sessionID)
@@ -82,16 +82,16 @@ func (uc *SendButtonsMessageUseCase) Execute(ctx context.Context, sessionID uuid
 
 	uc.logger.WithFields(map[string]interface{}{
 		"sessionId": sessionID,
-		"phone":     normalizedPhone,
+		"to":        normalizedPhone,
 		"messageId": messageID,
 	}).Info().Msg("Buttons message sent successfully")
 
 	// Criar resposta
 	response := &message.SendMessageResponse{
-		ID: messageID,
-		Status:    "sent",
+		ID:     messageID,
+		Status: "sent",
 		Details: map[string]interface{}{
-			"phone":       normalizedPhone,
+			"to":          normalizedPhone,
 			"sessionId":   sessionID,
 			"type":        "buttons",
 			"buttonCount": len(req.Buttons),
@@ -103,8 +103,8 @@ func (uc *SendButtonsMessageUseCase) Execute(ctx context.Context, sessionID uuid
 
 // validateRequest valida a requisição de envio de mensagem com botões
 func (uc *SendButtonsMessageUseCase) validateRequest(req message.SendButtonsMessageRequest) error {
-	if req.Number == "" {
-		return fmt.Errorf("phone number is required")
+	if req.To == "" {
+		return fmt.Errorf("to is required")
 	}
 
 	if req.Text == "" {
@@ -160,7 +160,7 @@ func (uc *SendButtonsMessageUseCase) validateRequest(req message.SendButtonsMess
 	}
 
 	// Validar formato do telefone
-	if !uc.isValidPhoneNumber(req.Number) {
+	if !uc.isValidPhoneNumber(req.To) {
 		return fmt.Errorf("invalid phone number format")
 	}
 

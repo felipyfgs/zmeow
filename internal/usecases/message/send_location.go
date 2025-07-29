@@ -38,7 +38,7 @@ func NewSendLocationMessageUseCase(
 func (uc *SendLocationMessageUseCase) Execute(ctx context.Context, sessionID uuid.UUID, req message.SendLocationMessageRequest) (*message.SendMessageResponse, error) {
 	uc.logger.WithFields(map[string]interface{}{
 		"sessionId": sessionID,
-		"phone":     req.Number,
+		"to":        req.To,
 		"latitude":  req.Latitude,
 		"longitude": req.Longitude,
 		"name":      req.Name,
@@ -65,7 +65,7 @@ func (uc *SendLocationMessageUseCase) Execute(ctx context.Context, sessionID uui
 	}
 
 	// Normalizar número de telefone
-	normalizedPhone := uc.normalizePhoneNumber(req.Number)
+	normalizedPhone := uc.normalizePhoneNumber(req.To)
 
 	// Obter cliente WhatsApp
 	client, err := uc.whatsappManager.GetClient(sessionID)
@@ -83,16 +83,16 @@ func (uc *SendLocationMessageUseCase) Execute(ctx context.Context, sessionID uui
 
 	uc.logger.WithFields(map[string]interface{}{
 		"sessionId": sessionID,
-		"phone":     normalizedPhone,
+		"to":        normalizedPhone,
 		"messageId": messageID,
 	}).Info().Msg("Location message sent successfully")
 
 	// Criar resposta
 	response := &message.SendMessageResponse{
-		ID: messageID,
-		Status:    "sent",
+		ID:     messageID,
+		Status: "sent",
 		Details: map[string]interface{}{
-			"phone":     normalizedPhone,
+			"to":        normalizedPhone,
 			"sessionId": sessionID,
 			"type":      "location",
 			"latitude":  req.Latitude,
@@ -107,8 +107,8 @@ func (uc *SendLocationMessageUseCase) Execute(ctx context.Context, sessionID uui
 
 // validateRequest valida a requisição de envio de localização
 func (uc *SendLocationMessageUseCase) validateRequest(req message.SendLocationMessageRequest) error {
-	if req.Number == "" {
-		return fmt.Errorf("phone number is required")
+	if req.To == "" {
+		return fmt.Errorf("to is required")
 	}
 
 	if req.Latitude < -90 || req.Latitude > 90 {
@@ -120,7 +120,7 @@ func (uc *SendLocationMessageUseCase) validateRequest(req message.SendLocationMe
 	}
 
 	// Validar formato do telefone
-	if !uc.isValidPhoneNumber(req.Number) {
+	if !uc.isValidPhoneNumber(req.To) {
 		return fmt.Errorf("invalid phone number format")
 	}
 

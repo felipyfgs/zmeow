@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"mime"
 	"path/filepath"
-	"regexp"
 	"strings"
 
 	"github.com/google/uuid"
@@ -22,6 +21,7 @@ type SendMediaMessageUseCase struct {
 	sessionRepo     session.SessionRepository
 	whatsappManager whatsapp.WhatsAppManager
 	logger          logger.Logger
+	numberValidator *NumberValidator
 }
 
 // NewSendMediaMessageUseCase cria uma nova instância do caso de uso
@@ -34,18 +34,24 @@ func NewSendMediaMessageUseCase(
 		sessionRepo:     sessionRepo,
 		whatsappManager: whatsappManager,
 		logger:          logger,
+		numberValidator: NewNumberValidator(),
 	}
 }
 
 // Execute executa o caso de uso para enviar mídia
 func (uc *SendMediaMessageUseCase) Execute(ctx context.Context, sessionID uuid.UUID, req message.SendMediaMessageRequest) (*message.SendMessageResponse, error) {
+	// Obter destinatário
+	destination := uc.numberValidator.GetDestination(req.Number, req.GroupJid)
+
 	uc.logger.WithFields(map[string]interface{}{
-		"sessionId": sessionID,
-		"number":    req.Number,
-		"mediaType": req.MediaType,
-		"caption":   req.Caption,
-		"fileName":  req.FileName,
-		"mimeType":  req.MimeType,
+		"sessionId":   sessionID,
+		"number":      req.Number,
+		"groupJid":    req.GroupJid,
+		"destination": destination,
+		"mediaType":   req.MediaType,
+		"caption":     req.Caption,
+		"fileName":    req.FileName,
+		"mimeType":    req.MimeType,
 	}).Info().Msg("Sending media message")
 
 	// Validar entrada
@@ -66,9 +72,6 @@ func (uc *SendMediaMessageUseCase) Execute(ctx context.Context, sessionID uuid.U
 		uc.logger.WithField("sessionId", sessionID).Warn().Msg("Session is not connected")
 		return nil, fmt.Errorf("session %s is not connected", sessionID)
 	}
-
-	// Normalizar número de telefone
-	normalizedPhone := uc.normalizePhoneNumber(req.Number)
 
 	// Verificar se é URL ou dados Base64
 	var mediaData []byte
@@ -101,10 +104,10 @@ func (uc *SendMediaMessageUseCase) Execute(ctx context.Context, sessionID uuid.U
 	var messageID string
 	if isURL {
 		// Para URLs, usar método específico que baixa e envia
-		messageID, err = client.SendMediaFromURL(ctx, sessionID, normalizedPhone, req.MediaType, req.Media, req.Caption, req.FileName, mimeType)
+		messageID, err = client.SendMediaFromURL(ctx, sessionID, destination, req.MediaType, req.Media, req.Caption, req.FileName, mimeType)
 	} else {
 		// Para dados Base64, usar método tradicional
-		messageID, err = client.SendMediaMessage(ctx, sessionID, normalizedPhone, req.MediaType, mediaData, req.Caption, req.FileName, mimeType)
+		messageID, err = client.SendMediaMessage(ctx, sessionID, destination, req.MediaType, mediaData, req.Caption, req.FileName, mimeType)
 	}
 
 	if err != nil {
@@ -113,10 +116,10 @@ func (uc *SendMediaMessageUseCase) Execute(ctx context.Context, sessionID uuid.U
 	}
 
 	uc.logger.WithFields(map[string]interface{}{
-		"sessionId": sessionID,
-		"phone":     normalizedPhone,
-		"messageId": messageID,
-		"mediaType": req.MediaType,
+		"sessionId":   sessionID,
+		"destination": destination,
+		"messageId":   messageID,
+		"mediaType":   req.MediaType,
 	}).Info().Msg("Media message sent successfully")
 
 	// Criar resposta
@@ -124,12 +127,14 @@ func (uc *SendMediaMessageUseCase) Execute(ctx context.Context, sessionID uuid.U
 		ID:     messageID,
 		Status: "sent",
 		Details: map[string]interface{}{
-			"phone":     normalizedPhone,
-			"sessionId": sessionID,
-			"type":      "media",
-			"mediaType": req.MediaType,
-			"fileName":  req.FileName,
-			"mimeType":  mimeType,
+			"number":      req.Number,
+			"groupJid":    req.GroupJid,
+			"destination": destination,
+			"sessionId":   sessionID,
+			"type":        "media",
+			"mediaType":   req.MediaType,
+			"fileName":    req.FileName,
+			"mimeType":    mimeType,
 		},
 	}
 
@@ -138,8 +143,9 @@ func (uc *SendMediaMessageUseCase) Execute(ctx context.Context, sessionID uuid.U
 
 // validateRequest valida a requisição de envio de mídia
 func (uc *SendMediaMessageUseCase) validateRequest(req message.SendMediaMessageRequest) error {
-	if req.Number == "" {
-		return fmt.Errorf("number is required")
+	// Validar destinatário (number ou groupJid)
+	if err := uc.numberValidator.ValidateDestination(req.Number, req.GroupJid); err != nil {
+		return err
 	}
 
 	if req.Media == "" {
@@ -160,11 +166,6 @@ func (uc *SendMediaMessageUseCase) validateRequest(req message.SendMediaMessageR
 
 	if !validTypes[req.MediaType] {
 		return fmt.Errorf("invalid media type: %s (allowed: image, audio, video, document)", req.MediaType)
-	}
-
-	// Validar formato do telefone
-	if !uc.isValidPhoneNumber(req.Number) {
-		return fmt.Errorf("invalid phone number format")
 	}
 
 	// Para documentos, nome do arquivo é obrigatório
@@ -227,37 +228,4 @@ func (uc *SendMediaMessageUseCase) detectMimeType(mediaType, fileName string) st
 	default:
 		return "application/octet-stream"
 	}
-}
-
-// isValidPhoneNumber valida o formato do número de telefone
-func (uc *SendMediaMessageUseCase) isValidPhoneNumber(phone string) bool {
-	// Remover caracteres não numéricos
-	cleaned := regexp.MustCompile(`[^\d]`).ReplaceAllString(phone, "")
-
-	// Verificar se tem pelo menos 10 dígitos e no máximo 15
-	if len(cleaned) < 10 || len(cleaned) > 15 {
-		return false
-	}
-
-	return true
-}
-
-// normalizePhoneNumber normaliza o número de telefone para o formato WhatsApp
-func (uc *SendMediaMessageUseCase) normalizePhoneNumber(phone string) string {
-	// Remover caracteres não numéricos
-	cleaned := regexp.MustCompile(`[^\d]`).ReplaceAllString(phone, "")
-
-	// Se não tem código de país, assumir Brasil (55)
-	if len(cleaned) == 10 || len(cleaned) == 11 {
-		if !strings.HasPrefix(cleaned, "55") {
-			cleaned = "55" + cleaned
-		}
-	}
-
-	// Adicionar sufixo @s.whatsapp.net se não estiver presente
-	if !strings.Contains(phone, "@") {
-		return cleaned + "@s.whatsapp.net"
-	}
-
-	return phone
 }

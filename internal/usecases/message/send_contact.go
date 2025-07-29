@@ -38,7 +38,7 @@ func NewSendContactMessageUseCase(
 func (uc *SendContactMessageUseCase) Execute(ctx context.Context, sessionID uuid.UUID, req message.SendContactMessageRequest) (*message.SendMessageResponse, error) {
 	uc.logger.WithFields(map[string]interface{}{
 		"sessionId":   sessionID,
-		"phone":       req.Number,
+		"to":          req.To,
 		"contactName": req.ContactName,
 		"contactJID":  req.ContactJID,
 	}).Info().Msg("Sending contact message")
@@ -63,7 +63,7 @@ func (uc *SendContactMessageUseCase) Execute(ctx context.Context, sessionID uuid
 	}
 
 	// Normalizar número de telefone
-	normalizedPhone := uc.normalizePhoneNumber(req.Number)
+	normalizedPhone := uc.normalizePhoneNumber(req.To)
 	normalizedContactJID := uc.normalizePhoneNumber(req.ContactJID)
 
 	// Obter cliente WhatsApp
@@ -82,16 +82,16 @@ func (uc *SendContactMessageUseCase) Execute(ctx context.Context, sessionID uuid
 
 	uc.logger.WithFields(map[string]interface{}{
 		"sessionId": sessionID,
-		"phone":     normalizedPhone,
+		"to":        normalizedPhone,
 		"messageId": messageID,
 	}).Info().Msg("Contact message sent successfully")
 
 	// Criar resposta
 	response := &message.SendMessageResponse{
-		ID: messageID,
-		Status:    "sent",
+		ID:     messageID,
+		Status: "sent",
 		Details: map[string]interface{}{
-			"phone":       normalizedPhone,
+			"to":          normalizedPhone,
 			"sessionId":   sessionID,
 			"type":        "contact",
 			"contactName": req.ContactName,
@@ -104,8 +104,8 @@ func (uc *SendContactMessageUseCase) Execute(ctx context.Context, sessionID uuid
 
 // validateRequest valida a requisição de envio de contato
 func (uc *SendContactMessageUseCase) validateRequest(req message.SendContactMessageRequest) error {
-	if req.Number == "" {
-		return fmt.Errorf("phone number is required")
+	if req.To == "" {
+		return fmt.Errorf("to is required")
 	}
 
 	if req.ContactName == "" {
@@ -117,7 +117,7 @@ func (uc *SendContactMessageUseCase) validateRequest(req message.SendContactMess
 	}
 
 	// Validar formato do telefone
-	if !uc.isValidPhoneNumber(req.Number) {
+	if !uc.isValidPhoneNumber(req.To) {
 		return fmt.Errorf("invalid phone number format")
 	}
 
